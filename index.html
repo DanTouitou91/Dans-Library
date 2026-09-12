@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>אוסף ספרי הלמידה של דן</title>
+<meta name="description" content="ספרייה דיגיטלית וינטג' לחומרי הלמידה של דן טואיטו — קריאה, סיכום וארגון של ספרי הקורסים.">
+<meta name="theme-color" content="#4A2418">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/favicon.svg">
+
+<!-- גופנים: Frank Ruhl Libre (כותרות), David Libre (גוף הטקסט), Miriam Libre (ממשק) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=David+Libre:wght@400;500;700&family=Miriam+Libre:wght@400;700&display=swap">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============================================================
+     טקסטורות SVG גלובליות (גרגירי עץ, נייר עתיק)
+     מוגדרות פעם אחת ומשמשות את כל האתר דרך CSS.
+     ============================================================ -->
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="tex-paper">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0"/>
+    </filter>
+    <filter id="tex-wood">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.35" numOctaves="5" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0"/>
+    </filter>
+  </defs>
+</svg>
+
+<!-- אזור הכרזות לקוראי מסך (שינויי עמוד, הודעות מצב) -->
+<div id="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ============================================================
+     מצב 1 — מדף הספרים
+     ============================================================ -->
+<div id="shelf-view" class="view" tabindex="-1">
+
+  <header class="masthead">
+    <div class="masthead__plate">
+      <h1 class="masthead__title">אוסף ספרי הלמידה של דן</h1>
+      <p class="masthead__sub">ספריית הקורסים · מדיניות ציבורית</p>
+    </div>
+
+    <div class="masthead__tools">
+      <button type="button" class="btn btn--brass" id="btn-about" aria-haspopup="dialog">
+        <span class="btn__icon" aria-hidden="true">❦</span>
+        <span class="btn__label">אודות</span>
+      </button>
+      <button type="button" class="btn btn--brass" id="btn-theme" aria-pressed="false">
+        <span class="btn__icon" aria-hidden="true" data-theme-icon>☾</span>
+        <span class="btn__label" data-theme-label>מצב כהה</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="library" id="library">
+    <!-- המדפים מוזרקים כאן מתוך CATALOG ב-script.js -->
+  </main>
+
+  <footer class="site-footer">
+    <span class="site-footer__rule" aria-hidden="true"></span>
+    <p>האתר נוצר על ידי דן טואיטו, למידה מהנה!</p>
+  </footer>
+</div>
+
+<!-- ============================================================
+     מצב 2 — כרטיסיית ספרייה
+     ============================================================ -->
+<div id="card-layer" class="overlay" hidden>
+  <div class="overlay__backdrop" data-close-layer></div>
+
+  <div class="index-card" role="dialog" aria-modal="true" aria-labelledby="card-title" tabindex="-1">
+    <div class="index-card__hole" aria-hidden="true"></div>
+
+    <div class="index-card__stamp" aria-hidden="true">
+      <span class="index-card__stamp-line">ספריית דן</span>
+      <span class="index-card__call" data-card-call></span>
+    </div>
+
+    <header class="index-card__head">
+      <p class="index-card__eyebrow">כרטיס קטלוג</p>
+      <h2 class="index-card__title" id="card-title" data-card-title></h2>
+    </header>
+
+    <section class="index-card__body">
+      <h3 class="index-card__label">מבוסס על המקורות הבאים</h3>
+      <ul class="index-card__sources" data-card-sources></ul>
+      <p class="index-card__meta" data-card-meta></p>
+    </section>
+
+    <footer class="index-card__foot">
+      <button type="button" class="btn btn--wood btn--lg" data-card-start data-autofocus>
+        <span class="btn__icon" aria-hidden="true">▤</span>
+        <span class="btn__label">התחל קריאה</span>
+      </button>
+      <button type="button" class="btn btn--ghost" data-close-layer>חזרה למדף</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============================================================
+     חלונית אודות
+     ============================================================ -->
+<div id="about-layer" class="overlay" hidden>
+  <div class="overlay__backdrop" data-close-layer></div>
+
+  <div class="tome" role="dialog" aria-modal="true" aria-labelledby="about-title" tabindex="-1">
+    <button type="button" class="tome__close" data-close-layer aria-label="סגירה">✕</button>
+    <div class="tome__page">
+      <h2 class="tome__title" id="about-title">אודות</h2>
+      <span class="tome__flourish" aria-hidden="true">❦</span>
+      <div class="tome__text">
+        <p>ברוכים הבאים לאוסף ספרי הלמידה של דן.</p>
+        <p>האתר הזה נולד מתוך צורך אישי ותשוקה לסביבת למידה שקטה, מאורגנת ומעוררת השראה. כסטודנט לתואר ראשון במדיניות ציבורית באוניברסיטה הפתוחה, מצאתי את עצמי מתמודד עם כמות עצומה של חומרי קריאה ומקורות מידע. כדי לייעל את הלמידה שלי, אני אוסף את המידע מכל קורס, מסכם, מנתח אותו, ומאגד הכל לספר מרוכז אחד. במקום ללכת לאיבוד בערימות של קבצים, יצרתי מרחב וירטואלי שבו כל קורס מקבל את המקום הראוי לו על המדף, ממש כמו בספרייה קלאסית של פעם.</p>
+        <p>החזון מאחורי האתר הוא להפוך את תהליך הקריאה האקדמי מחובה טכנית לחוויה נעימה ומרגיעה. העיצוב הוינטג'י, הלחצנים שמרגישים כמו פליז ועץ, ואפקט הדפדוף הריאליסטי, נועדו להכניס את הקורא לאווירה של מיקוד והעמקה, כמו לשבת בחדר עבודה עתיק עם כוס קפה וספר טוב.</p>
+        <p>הפלטפורמה הזו משמשת עבורי ככלי עזר מרכזי במסע האקדמי שלי, והיא מאפשרת לי לארגן ולנתח את חומרי הלימוד בצורה היעילה והנוחה ביותר. אני מזמין אתכם לדפדף, לחקור ולחוות את הלמידה מזווית קצת אחרת. למידה מהנה!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     מצב 3 — קורא הספרים
+     ============================================================ -->
+<div id="reader-view" class="view view--reader" hidden tabindex="-1">
+
+  <!-- סרגל כלים עליון -->
+  <div class="toolbar" role="toolbar" aria-label="כלי הקריאה">
+    <div class="toolbar__group">
+      <button type="button" class="btn btn--wood" data-act="back" title="חזרה למדף">
+        <span class="btn__icon" aria-hidden="true">❰</span>
+        <span class="btn__label">למדף</span>
+      </button>
+      <h2 class="toolbar__title" data-reader-title></h2>
+    </div>
+
+    <div class="toolbar__group toolbar__group--center">
+      <button type="button" class="btn btn--brass btn--icon" data-act="prev" title="העמוד הקודם" aria-label="העמוד הקודם">❱</button>
+
+      <form class="pagebox" data-act="goto-form">
+        <label class="sr-only" for="page-input">מעבר לעמוד</label>
+        <input type="text" inputmode="numeric" id="page-input" class="pagebox__input" value="1" autocomplete="off">
+        <span class="pagebox__sep" aria-hidden="true">/</span>
+        <span class="pagebox__total" data-page-total>—</span>
+      </form>
+
+      <button type="button" class="btn btn--brass btn--icon" data-act="next" title="העמוד הבא" aria-label="העמוד הבא">❰</button>
+    </div>
+
+    <div class="toolbar__group toolbar__group--end">
+      <button type="button" class="btn btn--brass btn--icon" data-act="bookmark" title="סימניה (ב)" aria-pressed="false" aria-label="סימניה">
+        <span aria-hidden="true">🔖</span>
+      </button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="notes" title="פנקס המלומד" aria-expanded="false" aria-label="פנקס המלומד">
+        <span aria-hidden="true">✒</span>
+      </button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="zoom-out" title="הקטנה" aria-label="הקטנה">−</button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="zoom-in" title="הגדלה" aria-label="הגדלה">+</button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="mode" title="מעבר לתצוגת גלילה" aria-label="החלפת תצוגה">☰</button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="fullscreen" title="מסך מלא" aria-label="מסך מלא">⛶</button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="print" title="הדפסה" aria-label="הדפסה">⎙</button>
+      <a class="btn btn--brass btn--icon" data-act="download" title="הורדה" aria-label="הורדה" download>⭳</a>
+    </div>
+  </div>
+
+  <!-- במה: כאן נבנה הקורא (דפדוף או גלילה) -->
+  <div class="stage" id="reader-stage" tabindex="-1"></div>
+
+  <!-- מסך טעינה: ספר נפתח -->
+  <div class="loader" id="loader" hidden>
+    <div class="loader__book" aria-hidden="true">
+      <span class="loader__leaf"></span>
+      <span class="loader__leaf"></span>
+      <span class="loader__leaf"></span>
+    </div>
+    <p class="loader__text">פותח את הספר…</p>
+    <p class="loader__progress" data-loader-progress></p>
+  </div>
+
+  <!-- מצב שגיאה (קובץ חסר / פגום) -->
+  <div class="fault" id="fault" hidden>
+    <span class="fault__mark" aria-hidden="true">✜</span>
+    <h3 class="fault__title" data-fault-title>הספר לא נמצא על המדף</h3>
+    <p class="fault__text" data-fault-text></p>
+    <button type="button" class="btn btn--wood" data-act="back">חזרה למדף</button>
+  </div>
+
+  <!-- פנקס המלומד -->
+  <aside class="notepad" id="notepad" hidden aria-labelledby="notepad-title">
+    <header class="notepad__head">
+      <h3 class="notepad__title" id="notepad-title">
+        <span aria-hidden="true">✒</span> פנקס המלומד
+      </h3>
+      <button type="button" class="notepad__close" data-act="notes-close" aria-label="סגירת הפנקס">✕</button>
+    </header>
+    <p class="notepad__book" data-notepad-book></p>
+    <label class="sr-only" for="notepad-text">הערות לספר</label>
+    <textarea id="notepad-text" class="notepad__text" spellcheck="true"
+              placeholder="כאן נרשמות התובנות, הסיכומים והשאלות שעולות תוך כדי הקריאה…"></textarea>
+    <footer class="notepad__foot">
+      <span class="notepad__status" data-notepad-status>נשמר אוטומטית</span>
+      <span class="notepad__count" data-notepad-count></span>
+    </footer>
+  </aside>
+</div>
+
+<!-- ============================================================
+     ספריות — מקומיות (vendor/), לא מ-CDN.
+     מיקום מקומי חיוני: ה-worker של pdf.js חייב להיות באותו origin,
+     ושתי גרסאות נעולות ב-git לעולם לא יתפצלו זו מזו.
+     ============================================================ -->
+<script src="vendor/pdfjs/pdf.min.js"></script>
+<script src="vendor/page-flip/page-flip.browser.js"></script>
+<script src="script.js" defer></script>
+</body>
+</html>

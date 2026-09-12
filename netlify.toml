@@ -1,0 +1,9 @@
+# ‎תצורת Netlify — אתר סטטי לחלוטין, ללא שלב בנייה.
+# ‎הכותרות (headers) מוגדרות בקובץ _headers כדי שיהיה מקור אמת אחד.
+
+[build]
+  publish = "."
+
+[build.environment]
+  # ‎אין תלויות npm להתקנה — האתר מגיש קבצים סטטיים בלבד.
+  NETLIFY_USE_YARN = "false"

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="leather" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7B2233"/>
+      <stop offset="1" stop-color="#4A1220"/>
+    </linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E8CE8F"/>
+      <stop offset=".5" stop-color="#B08D57"/>
+      <stop offset="1" stop-color="#8A6A3B"/>
+    </linearGradient>
+  </defs>
+  <!-- כריכת עור -->
+  <path d="M12 6h34a6 6 0 0 1 6 6v40a6 6 0 0 1-6 6H12z" fill="url(#leather)"/>
+  <!-- דפים -->
+  <path d="M12 6h6v52h-6z" fill="#F4E8D0"/>
+  <path d="M12 6h6v52h-6z" fill="none" stroke="#C9B28A" stroke-width=".75"/>
+  <!-- הטבעות פליז -->
+  <rect x="24" y="16" width="22" height="2.5" rx="1.25" fill="url(#brass)"/>
+  <rect x="24" y="23" width="15" height="2" rx="1" fill="url(#brass)" opacity=".8"/>
+  <rect x="24" y="44" width="22" height="2.5" rx="1.25" fill="url(#brass)"/>
+  <!-- עיטור מרכזי -->
+  <circle cx="35" cy="33" r="6" fill="none" stroke="url(#brass)" stroke-width="2"/>
+  <circle cx="35" cy="33" r="1.8" fill="url(#brass)"/>
+  <!-- סימניית בד -->
+  <path d="M44 6h5v20l-2.5-4-2.5 4z" fill="#8E1B2B"/>
+</svg>

@@ -1,0 +1,16 @@
+# ‎מערכת הפעלה
+.DS_Store
+Thumbs.db
+
+# ‎עורכים
+.vscode/
+.idea/
+*.swp
+
+# ‎תלויות וקבצי בנייה (אין בשימוש — האתר סטטי)
+node_modules/
+.netlify/
+
+# ‎קבצים זמניים
+*.log
+*.tmp
