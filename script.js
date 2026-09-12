@@ -692,11 +692,16 @@ function renderPageToCanvas(doc, pageNum, canvas, boxW, boxH) {
       canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
     }
 
+    /* ⚠️ רקע לבן, ולא קרם. קודם צבענו כאן #F4E8D0 כדי לשמור על מראה
+     * וינטג', אבל עמוד PDF כמעט אף פעם לא מצייר רקע משלו — הוא שקוף
+     * במקום שבו העיצוב שלו לבן, והצבע שלנו נצבע מתחתיו. התוצאה הייתה
+     * שכל שוליים לבנים בספרים של דן יצאו חומים, והמסגרת הלבנה שתוכננה
+     * בעיצוב פשוט נעלמה. העמוד נצבע עכשיו בדיוק כפי שהוא בקובץ. */
     const ctx = canvas.getContext('2d', { alpha: false });
-    ctx.fillStyle = '#F4E8D0';
+    ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    renderTask = page.render({ canvasContext: ctx, viewport, background: '#F4E8D0' });
+    renderTask = page.render({ canvasContext: ctx, viewport, background: '#FFFFFF' });
     try {
       await renderTask.promise;
     } catch (err) {
@@ -1028,6 +1033,7 @@ class FlipReader {
     this.host = host;
 
     this.buildLeaves();
+    this.fitToStage();   // לפני הבנייה, כדי שהספרייה תמדוד רוחב שכבר מוגבל
 
     const box = this.measureBox();
     this.pageFlip = new PageFlipCtor(host, {
@@ -1307,8 +1313,31 @@ class FlipReader {
    * ה-CSS מותח את העלים, אבל הקנבסים לא מקבלים פיקסלים בקסם.
    * מחלקים את הרוחב ל"מדרגות" של 128px ומציירים מחדש רק כשהמדרגה משתנה.
    */
+  /**
+   * מגביל את רוחב הספר כך שהעמוד ייכנס לגובה הבמה במלואו.
+   *
+   * ⚠️ StPageFlip עם autoSize גוזר את גובה הספר אך ורק מהרוחב: הוא נותן
+   * ל-wrapper ריפוד תחתון באחוזים, `height / (width*2)`. כלומר הגובה
+   * הזמין בחלון לא משפיע עליו בכלל, ובחלון רחב ונמוך העמוד פשוט נחתך
+   * בתחתית ודרש גלילה. לכן מחשבים כאן את הרוחב המרבי שממנו נגזר גובה
+   * שנכנס בבמה, ומגבילים את המעטפת — הספרייה נשארת אחראית על השאר.
+   */
+  fitToStage() {
+    const stage = this.container;
+    const wrap = this.host?.parentElement;
+    if (!stage || !wrap) return;
+    const cs = getComputedStyle(stage);
+    const availH = stage.clientHeight
+      - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
+    if (!(availH > 80)) return;
+    const aspect = this.source?.metrics?.aspect || 0.707;
+    // גובה = רוחב × (1 / (2·aspect))  ⇐  רוחב = גובה × 2 × aspect
+    wrap.style.maxInlineSize = `${Math.floor(availH * 2 * aspect)}px`;
+  }
+
   onResize() {
     if (!this.pageFlip || this._reinitializing) return;
+    this.fitToStage();
 
     /* הלוגיקה הקודמת מדדה container.clientWidth/2 וקיטלגה ל"מדרגות" של
      * 128px. היא התעלמה מריפוד הבמה, מ-maxWidth ומאילוץ הגובה — ושינוי
