@@ -861,6 +861,43 @@ ul { margin: 0; padding: 0; list-style: none; }
   box-shadow: 0 18px 44px -12px rgba(28,16,4,.62), 0 3px 10px rgba(28,16,4,.34);
 }
 
+/* --- אמצע הספר: צל השדרה --- *
+   שני העמודים נפגשים בקו האמצע, ובספר אמיתי הנייר מתעקל שם פנימה אל
+   הכריכה ונופל עליו צל. בלי זה הכפולה נראית כמו שני מלבנים שהוצמדו.
+   הצל מצויר כשכבה *מעל* הקנבס (z-index 2), כי הקנבס ממלא את העלה
+   מקצה לקצה ו-inset-shadow על ההורה היה מוסתר מתחתיו. הוא נשאר מתחת
+   לסימנייה (z-index 3).
+
+   ⚠️ הצד נקבע לפי המחלקות --left/--right ש-StPageFlip מוסיפה לכל עלה,
+   ולא לפי כיווניות: עמוד ימני נכרך בקצה השמאלי שלו, ועמוד שמאלי בקצה
+   הימני. לכן left/right כאן פיזיים בכוונה, ואסור להחליף אותם
+   ב-inset-inline. */
+#flip-book .leaf:not([data-blank="true"]) .leaf-inner::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inline-size: 9%;
+  max-inline-size: 62px;
+  pointer-events: none;
+  z-index: 2;
+}
+#flip-book .leaf.--right .leaf-inner::before {
+  left: 0;
+  background: linear-gradient(to right,
+    rgba(20,13,5,.26), rgba(20,13,5,.09) 42%, transparent 100%);
+}
+#flip-book .leaf.--left .leaf-inner::before {
+  right: 0;
+  background: linear-gradient(to left,
+    rgba(20,13,5,.26), rgba(20,13,5,.09) 42%, transparent 100%);
+}
+/* ספר סגור — אין כפולה, ולכן די ברמז דק של כריכה ולא בצל שדרה מלא */
+#flip-book.is-closed .leaf:not([data-blank="true"]) .leaf-inner::before {
+  inline-size: 4%;
+  background: linear-gradient(to right,
+    rgba(20,13,5,.20), transparent 100%);
+}
+
 /* עמוד בגודל חריג — מסגרת עדינה שמסבירה את הלטרבוקס */
 .leaf--odd-size .leaf-canvas { box-shadow: 0 0 0 1px rgba(0,0,0,.10), 0 2px 8px rgba(0,0,0,.12); }
 
