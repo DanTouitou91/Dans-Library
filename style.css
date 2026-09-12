@@ -824,10 +824,50 @@ ul { margin: 0; padding: 0; list-style: none; }
 /* אין כאן מספר עמוד משלנו: לספרים של דן יש כותרת תחתונה משלהם, והמספר
    הצף נחת בדיוק עליה. מספר העמוד מוצג בסרגל הכלים. */
 
-/* עלה ריק (כריכה פנימית) */
-.leaf[data-blank="true"] .leaf-inner {
-  background-image:
-    repeating-linear-gradient(45deg, rgba(120,85,40,.05) 0 6px, transparent 6px 12px);
+/* עלה ריק = היעדר עמוד, ולא עמוד ריק.
+   הוא קיים רק בשני קצות הספר (מול הכריכה ומול העמוד האחרון) ותפקידו
+   היחיד הוא לשמור על מבנה הכפולה. כשצייִרנו אותו כנייר, הכריכה נראתה
+   כמו ספר *פתוח* על דף ריק במקום ספר סגור. לכן הוא שקוף לחלוטין:
+   בכריכה רואים ספר סגור, והשטח שלצידו הוא בדיוק המקום שאליו הכריכה
+   תיפתח. */
+#flip-book .leaf[data-blank="true"] { background-color: transparent; }
+#flip-book .leaf[data-blank="true"] .leaf-inner {
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+/* בלי הבהוב שלד: עלה ריק לעולם לא ייטען, אז האנימציה הייתה רצה לנצח. */
+#flip-book .leaf[data-blank="true"].is-placeholder .leaf-inner::after { content: none; }
+
+/* הכריכה. היא תמיד עומדת לבדה מול עלה ריק — כלומר היא הספר הסגור עצמו —
+   ולכן מקבלת צללית שדרה שנותנת לה נפח של כריכה קשה.
+   ⚠️ היסטי box-shadow הם פיזיים ואינם מתהפכים ב-RTL. השדרה של ספר עברי
+   יושבת בקצה השמאלי של הכריכה (קו האמצע של הבמה), ולכן ההיסט חיובי. */
+/* ספר סגור — רק כשהכריכה עומדת לבדה. הצל יושב על .leaf עצמו ולכן אינו
+   נחתך על ידי ה-overflow הפנימי, והסימון is-closed יורד ברגע שהספר
+   נפתח כדי שהצל לא ייגרר לתוך אנימציית הדפדוף. */
+/* ⚠️ translate בלבד — לעולם לא scale/mirror. StPageFlip מחשב את מיקום
+   העכבר כ-clientX פחות ה-rect של הבלוק, ו-rect כולל הזזה, ולכן הגרירה
+   נשארת מדויקת. שינוי קנה מידה היה שובר אותה. */
+/* ⚠️ ה-transition מוגדר על .is-closed ולא על #flip-book, ולכן הוא פועל
+   רק בכיוון אחד: בסגירה (הוספת המחלקה) הספר נאסף למרכז ברכות, ובפתיחה
+   (הסרתה) הוא קופץ למקומו בפריים אחד — בדיוק ברגע שהכריכה מתחילה
+   להתרומם, כך שהקפיצה נבלעת בתנועה ואין רגע אחד של עמוד חתוך. */
+#flip-book.is-closed {
+  transform: translateX(-25%);
+  transition: transform .45s cubic-bezier(.22,.61,.36,1);
+}
+@media (prefers-reduced-motion: reduce) { #flip-book.is-closed { transition: none; } }
+
+#flip-book.is-closed .leaf:not([data-blank="true"]) {
+  box-shadow: 0 18px 44px -12px rgba(28,16,4,.62), 0 3px 10px rgba(28,16,4,.34);
+}
+
+#flip-book .leaf[data-page="1"] .leaf-inner {
+  box-shadow:
+    inset 18px 0 26px -18px rgba(38,22,6,.55),
+    inset 0 0 58px rgba(90,60,25,.20),
+    inset 0 0 0 1px rgba(120,85,40,.14);
 }
 
 /* עמוד בגודל חריג — מסגרת עדינה שמסבירה את הלטרבוקס */

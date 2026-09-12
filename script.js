@@ -1121,7 +1121,12 @@ class FlipReader {
 
     // מתחילים לצייר ברגע שהאצבע מקפלת פינה, לא כשהדף כבר התהפך
     this.pageFlip.on('changeState', (e) => {
-      if (e.data === 'user_fold' || e.data === 'fold_corner') {
+      // ברגע שהספר בתנועה הוא כבר לא סגור, ולכן מרכוז "ספר סגור" יורד
+      // מיד. חייבים כאן ולא באירוע flip: האירוע מגיע כ-200ms אחרי תחילת
+      // האנימציה, ובפרק הזמן הזה העמוד שנחשף היה מוזז ונחתך בקצה השמאלי.
+      if (e.data !== 'read') this.host?.classList.remove('is-closed');
+      // חזרה למנוחה (גם אחרי קיפול פינה שלא הושלם) — לחשב את המצב מחדש.
+      if (e.data === 'user_fold' || e.data === 'fold_corner' || e.data === 'read') {
         this.reconcile(this.pageFlip.getCurrentPageIndex());
       }
     });
@@ -1167,9 +1172,30 @@ class FlipReader {
   idxOf(page)  { return this.pageToLeaf.has(page) ? this.pageToLeaf.get(page) : 0; }
   pageOf(idx)  { return this.plan[idx] ?? null; }
 
-  // ⚠️ הכיוון הפוך מהספרייה — ראו ההסבר בראש הסעיף
-  advance() { try { this.pageFlip.flipPrev('top'); } catch (e) { this.fail(e); } }
-  retreat() { try { this.pageFlip.flipNext('top'); } catch (e) { this.fail(e); } }
+  /**
+   * האם הספרייה מציגה כרגע עלה בודד (מסך צר).
+   * חשוב לניווט — ראו את ההערה ב-advance().
+   */
+  isPortrait() {
+    try { return this.pageFlip?.getOrientation() === 'portrait'; } catch { return false; }
+  }
+
+  // ⚠️ הכיוון הפוך מהספרייה — ראו ההסבר בראש הסעיף.
+  //
+  // ⚠️⚠️ ובמסך צר אי אפשר להשתמש ב-flipPrev בכלל. מקור האמת הוא הקוד
+  // של הספרייה: flipPrev מדמה מגע בנקודה x=10, כלומר בחצי השמאלי של
+  // תיבת הספר. בתצוגת פורטרט StPageFlip מציב את העלה היחיד בחצי הימני
+  // (setLeftPage(null)), ולכן בנקודה הזו אין עמוד — והקריאה לא עושה
+  // כלום. התוצאה: במובייל אפשר היה רק לחזור אחורה, לא להתקדם.
+  // לכן במסך צר מנווטים לפי מספר עמוד, שם כל כפולה היא עמוד אחד ממילא.
+  advance() {
+    if (this.isPortrait()) { this.goTo(Math.min(this.current + 1, this.source.numPages)); return; }
+    try { this.pageFlip.flipPrev('top'); } catch (e) { this.fail(e); }
+  }
+  retreat() {
+    if (this.isPortrait()) { this.goTo(Math.max(this.current - 1, 1)); return; }
+    try { this.pageFlip.flipNext('top'); } catch (e) { this.fail(e); }
+  }
 
   goTo(page, { animate = true } = {}) {
     const idx = this.idxOf(clamp(page, 1, this.source.numPages));
@@ -1192,6 +1218,11 @@ class FlipReader {
 
   /** מצייר את החלון שמסביב לכפולה הנוכחית ומפנה את מה שרחוק ממנה. */
   reconcile(centerIdx) {
+    // ספר סגור: כשהכפולה הנוכחית מכילה רק את הכריכה, מסמנים את המארח
+    // כדי ש-CSS יוסיף צל שמושיב את הספר על השולחן. הסימון יורד ברגע
+    // שהספר נפתח, ולכן הצל לעולם לא מתערבב באנימציית הדפדוף.
+    this.host?.classList.toggle('is-closed', this.spreadPages(centerIdx).length === 1);
+
     const RADIUS = 2, KEEP = TOUCH_DEVICE ? 3 : 4;
     const spread = this.isSpread() ? 1 : 0;
     const lo = Math.max(0, centerIdx - spread - RADIUS);
