@@ -89,6 +89,25 @@
         <circle cx="95" cy="90" r="4.5" fill="url(#lampBrass)"/>
       </g>
     </symbol>
+
+    <!-- ===== סט אייקונים קווי =====
+         גריד 24, קו 1.5, פינות מעוגלות, יורש currentColor.
+         ⚠️ SVG ולא תווי טקסט בכוונה: תווי חצים מסוג סוגריים נושאים
+         Bidi_Mirrored, והדפדפן מצייר אותם הפוך בהקשר RTL. ל-path אין
+         שום התנהגות דו-כיוונית — הצורה נקבעת כאן ונשארת. -->
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/><path d="M4.5 12H15"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M7 4.5h10a1 1 0 0 1 1 1v14l-6-3.8-6 3.8v-14a1 1 0 0 1 1-1z"/></symbol>
+    <symbol id="i-quill" viewBox="0 0 24 24"><path d="M19.5 4.5c-8 1-12.5 5-13.5 9.5L5 19l5-1c4.5-1 8.5-5.5 9.5-13.5z"/><path d="m5.5 18.5 5.5-5.5"/></symbol>
+    <symbol id="i-zoom-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.2"/><path d="m15.6 15.6 4.4 4.4"/><path d="M11 8.4v5.2M8.4 11h5.2"/></symbol>
+    <symbol id="i-zoom-out" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.2"/><path d="m15.6 15.6 4.4 4.4"/><path d="M8.4 11h5.2"/></symbol>
+    <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.5C10 5.1 7.2 4.5 4.5 4.5v13c2.7 0 5.5.6 7.5 2 2-1.4 4.8-2 7.5-2v-13c-2.7 0-5.5.6-7.5 2z"/><path d="M12 6.5v13"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4.5 9.5v-4a1 1 0 0 1 1-1h4"/><path d="M19.5 9.5v-4a1 1 0 0 0-1-1h-4"/><path d="M4.5 14.5v4a1 1 0 0 0 1 1h4"/><path d="M19.5 14.5v4a1 1 0 0 1-1 1h-4"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><path d="M12 11.2v5"/><path d="M12 7.9h.01"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4.6 21 20H3z"/><path d="M12 10.2v4"/><path d="M12 17.1h.01"/></symbol>
   </defs>
 </svg>
 
@@ -114,7 +133,7 @@
 
     <div class="masthead__tools">
       <button type="button" class="btn btn--brass" id="btn-about" aria-haspopup="dialog">
-        <span class="btn__icon" aria-hidden="true">❦</span>
+        <span class="btn__icon" aria-hidden="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"/></svg></span>
         <span class="btn__label">אודות</span>
       </button>
       <button type="button" class="lamp" data-lamp-toggle aria-pressed="true"
@@ -164,7 +183,7 @@
 
     <footer class="index-card__foot">
       <button type="button" class="btn btn--wood btn--lg" data-card-start data-autofocus>
-        <span class="btn__icon" aria-hidden="true">▤</span>
+        <span class="btn__icon" aria-hidden="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-book"/></svg></span>
         <span class="btn__label">התחל קריאה</span>
       </button>
       <button type="button" class="btn btn--ghost" data-close-layer>חזרה למדף</button>
@@ -179,7 +198,7 @@
   <div class="overlay__backdrop" data-close-layer></div>
 
   <div class="tome" role="dialog" aria-modal="true" aria-labelledby="about-title" tabindex="-1">
-    <button type="button" class="tome__close" data-close-layer aria-label="סגירה">✕</button>
+    <button type="button" class="tome__close" data-close-layer aria-label="סגירה"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
     <div class="tome__page">
       <h2 class="tome__title" id="about-title">אודות</h2>
       <span class="tome__flourish" aria-hidden="true">❦</span>
@@ -202,14 +221,14 @@
   <div class="toolbar" role="toolbar" aria-label="כלי הקריאה">
     <div class="toolbar__group">
       <button type="button" class="btn btn--wood" data-act="back" title="חזרה למדף">
-        <span class="btn__icon" aria-hidden="true">▶</span>
+        <span class="btn__icon" aria-hidden="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-back"/></svg></span>
         <span class="btn__label">למדף</span>
       </button>
       <h2 class="toolbar__title" data-reader-title></h2>
     </div>
 
     <div class="toolbar__group toolbar__group--center">
-      <button type="button" class="btn btn--brass btn--icon" data-act="prev" title="העמוד הקודם" aria-label="העמוד הקודם">❱</button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="prev" title="העמוד הקודם" aria-label="העמוד הקודם"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-prev"/></svg></button>
 
       <form class="pagebox" data-act="goto-form">
         <label class="sr-only" for="page-input">מעבר לעמוד</label>
@@ -218,32 +237,42 @@
         <span class="pagebox__total" data-page-total>—</span>
       </form>
 
-      <button type="button" class="btn btn--brass btn--icon" data-act="next" title="העמוד הבא" aria-label="העמוד הבא">❰</button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="next" title="העמוד הבא" aria-label="העמוד הבא"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-next"/></svg></button>
     </div>
 
     <div class="toolbar__group toolbar__group--end">
       <button type="button" class="btn btn--brass btn--icon" data-act="bookmark" title="סימניה (ב)" aria-pressed="false" aria-label="סימניה">
-        <span aria-hidden="true">🔖</span>
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bookmark"/></svg>
       </button>
       <button type="button" class="btn btn--brass btn--icon" data-act="notes" title="פנקס המלומד" aria-expanded="false" aria-label="פנקס המלומד">
-        <span aria-hidden="true">✒</span>
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-quill"/></svg>
       </button>
-      <button type="button" class="btn btn--brass btn--icon" data-act="zoom-out" title="הקטנה" aria-label="הקטנה">−</button>
-      <button type="button" class="btn btn--brass btn--icon" data-act="zoom-in" title="הגדלה" aria-label="הגדלה">+</button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="zoom-out" title="הקטנה" aria-label="הקטנה"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-zoom-out"/></svg></button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="zoom-in" title="הגדלה" aria-label="הגדלה"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-zoom-in"/></svg></button>
       <button type="button" class="btn btn--brass btn--icon lamp lamp--mini" data-lamp-toggle
               aria-pressed="true" aria-label="כיבוי מנורת הספרייה" title="כיבוי המנורה">
         <svg class="lamp__art" viewBox="0 0 120 148" aria-hidden="true" focusable="false">
           <use href="#lamp-art"/>
         </svg>
       </button>
-      <button type="button" class="btn btn--brass btn--icon" data-act="mode" title="מעבר לתצוגת גלילה" aria-label="החלפת תצוגה">☰</button>
-      <button type="button" class="btn btn--brass btn--icon" data-act="fullscreen" title="מסך מלא" aria-label="מסך מלא">⛶</button>
-      <button type="button" class="btn btn--brass btn--icon" data-act="print" title="הדפסה" aria-label="הדפסה">⎙</button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="mode" title="מעבר לתצוגת גלילה" aria-label="החלפת תצוגה"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scroll" data-mode-icon/></svg></button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="fullscreen" title="מסך מלא" aria-label="מסך מלא"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-expand"/></svg></button>
     </div>
   </div>
 
   <!-- במה: כאן נבנה הקורא (דפדוף או גלילה) -->
   <div class="stage" id="reader-stage" tabindex="-1"></div>
+
+  <!-- חצי דפדוף עדינים על קצוות הספר.
+       ב-RTL "קדימה" הוא שמאלה, ולכן next יושב ב-inline-end. -->
+  <button type="button" class="page-nav page-nav--next" data-act="next"
+          aria-label="העמוד הבא" title="העמוד הבא">
+    <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-next"/></svg>
+  </button>
+  <button type="button" class="page-nav page-nav--prev" data-act="prev"
+          aria-label="העמוד הקודם" title="העמוד הקודם">
+    <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-prev"/></svg>
+  </button>
 
   <!-- מסך טעינה: ספר נפתח -->
   <div class="loader" id="loader" hidden>
@@ -258,7 +287,7 @@
 
   <!-- מצב שגיאה (קובץ חסר / פגום) -->
   <div class="fault" id="fault" hidden>
-    <span class="fault__mark" aria-hidden="true">✜</span>
+    <span class="fault__mark" aria-hidden="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg></span>
     <h3 class="fault__title" data-fault-title>הספר לא נמצא על המדף</h3>
     <p class="fault__text" data-fault-text></p>
     <button type="button" class="btn btn--wood" data-act="back">חזרה למדף</button>
@@ -268,9 +297,9 @@
   <aside class="notepad" id="notepad" hidden aria-labelledby="notepad-title">
     <header class="notepad__head">
       <h3 class="notepad__title" id="notepad-title">
-        <span aria-hidden="true">✒</span> פנקס המלומד
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-quill"/></svg> פנקס המלומד
       </h3>
-      <button type="button" class="notepad__close" data-act="notes-close" aria-label="סגירת הפנקס">✕</button>
+      <button type="button" class="notepad__close" data-act="notes-close" aria-label="סגירת הפנקס"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
     </header>
     <p class="notepad__book" data-notepad-book></p>
     <label class="sr-only" for="notepad-text">הערות לספר</label>

@@ -416,6 +416,38 @@ const Shelf = {
     return section;
   },
 
+  /**
+   * הספר נשלף מהמדף ואז נפתח.
+   * מומש ב-CSS 3D + Web Animations API שמובנים בדפדפן. Framer Motion
+   * הייתה דורשת React ושלב בנייה שלמים בשביל אנימציה אחת.
+   * מיקום השדרה נשמר כמשתנה CSS, כדי שהכרטיסייה "תיפתח" בדיוק ממנו
+   * כמו כריכה שנפתחת על ציר.
+   */
+  pullOut(spineEl, book) {
+    const go = () => Router.go(`#/book/${book.id}`);
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced || typeof spineEl.animate !== 'function') return go();
+
+    const r = spineEl.getBoundingClientRect();
+    document.documentElement.style.setProperty('--open-x', `${Math.round(r.left + r.width / 2)}px`);
+    document.documentElement.style.setProperty('--open-y', `${Math.round(r.top + r.height / 2)}px`);
+
+    spineEl.classList.add('is-pulling');
+    const pull = spineEl.animate([
+      { transform: 'translateY(0) rotate(0) scale(1)' },
+      { transform: 'translateY(-26px) rotate(-2.5deg) scale(1.05)', offset: .55 },
+      { transform: 'translateY(-18px) rotate(0) scale(1.02)' },
+    ], { duration: 340, easing: 'cubic-bezier(.22,.9,.3,1.15)', fill: 'forwards' });
+
+    pull.finished.then(go).catch(go).finally(() => {
+      setTimeout(() => {
+        spineEl.classList.remove('is-pulling');
+        try { pull.cancel(); } catch {}
+      }, 420);
+    });
+  },
+
   buildSpine(book) {
     const state = Store.state(book.id);
     const el = document.createElement('button');
@@ -425,7 +457,7 @@ const Shelf = {
 
     const spine = book.spine || {};
     el.style.setProperty('--spine-color', spine.color || '#6E1D2B');
-    el.style.setProperty('--spine-h', `${Math.round(215 * (spine.height || 1))}px`);
+    el.style.setProperty('--spine-h', `${Math.round(272 * (spine.height || 1))}px`);
     el.setAttribute('aria-label',
       `${book.title}${state.lastPage > 1 ? ` — נקרא עד עמוד ${state.lastPage}` : ''}`);
 
@@ -441,7 +473,7 @@ const Shelf = {
       el.append(ribbon);
     }
 
-    el.addEventListener('click', () => Router.go(`#/book/${book.id}`));
+    el.addEventListener('click', () => this.pullOut(el, book));
     return el;
   },
 };
@@ -604,9 +636,12 @@ function whenPdfjsReady() {
   return _pdfjsWait;
 }
 
-/** מגבלות זיכרון: iOS מגביל את סך שטח הקנבסים בדף. */
+/* מגבלות זיכרון. iOS מגביל את סך שטח הקנבסים בדף ולכן שם התקרה נמוכה,
+   אבל בדסקטופ תקרה של 4MP הייתה נכנסת לפעולה כבר בעלה ברוחב ~840px
+   במסך Retina ומורידה את החדות ב-4%. 6MP מכסה מסך רחב ב-DPR 2 בלי
+   להעמיס: רק הכפולה הנוכחית ושכניה הקרובים מוחזקים בזיכרון. */
 const TOUCH_DEVICE = matchMedia('(hover: none)').matches;
-const MAX_CANVAS_PX = TOUCH_DEVICE ? 2_500_000 : 4_000_000;
+const MAX_CANVAS_PX = TOUCH_DEVICE ? 2_500_000 : 6_000_000;
 
 /**
  * מצייר עמוד PDF לתוך קנבס, בהתאמה לצפיפות המסך.
@@ -967,7 +1002,7 @@ class FlipReader {
     this.leafEls = [];
     this.pageFlip = null;
     this.current = 1;
-    this.tier = 0;
+    this._renderedBox = null;
     this._reinitializing = false;
   }
 
@@ -1009,12 +1044,12 @@ class FlipReader {
       drawShadow: true,
       maxShadowOpacity: 0.5,
       flippingTime: 700,
-      useMouseEvents: true,
-      showPageCorners: true,
+      useMouseEvents: true,      // הגרירה נשארת — היא חלק מהחוויה
+      showPageCorners: false,    // בלי הרמת פינה אוטומטית בריחוף
       mobileScrollSupport: false,
       swipeDistance: 30,
       clickEventForward: true,   // קליקים על button/a בתוך העלה לא הופכים דף
-      disableFlipByClick: false,
+      disableFlipByClick: true,  // מעבר עמוד רק דרך החצים או גרירה
       startZIndex: 0,
     });
 
@@ -1037,6 +1072,29 @@ class FlipReader {
     const aspect = this.source.metrics.aspect || 0.707;
     const h = 900;
     return { w: Math.round(h * aspect), h };
+  }
+
+  /**
+   * מקור האמת היחיד לגודל העלה המוצג.
+   *
+   * ⚠️ אסור למדוד עלה בודד ב-getBoundingClientRect, משתי סיבות נפרדות:
+   *   1. StPageFlip מסתיר כל עלה שאינו בכפולה הנוכחית ב-display:none,
+   *      ואז המדידה מחזירה אפס — ונפילה לברירת מחדל קבועה ציירה כל
+   *      עמוד שנחשף בדפדוף ברוחב 636 בלבד. זה היה מקור הטשטוש.
+   *   2. getBoundingClientRect מחזיר את המלבן *אחרי* טרנספורם, ולכן
+   *      בזום או באמצע דפדוף (עלה מסובב) הוא מחזיר מידות שגויות —
+   *      וזה היה מקור החיתוך בשוליים.
+   *
+   * offsetWidth/offsetHeight הם מידות **פריסה**: הם חסינים לטרנספורם,
+   * והבלוק של הספרייה תמיד מודד נכון גם כשעלים בודדים מוסתרים.
+   */
+  leafBox() {
+    const block = this.host?.querySelector('.stf__block') || this.host;
+    const cols = this.isSpread() ? 2 : 1;
+    const w = Math.round((block?.offsetWidth || 0) / cols);
+    const h = Math.round(block?.offsetHeight || 0);
+    if (w > 40 && h > 40) return { w, h };
+    return this.measureBox();   // רק לפני שהספרייה הספיקה למדוד בכלל
   }
 
   buildLeaves() {
@@ -1164,9 +1222,12 @@ class FlipReader {
     const canvas = $('.leaf-canvas', leaf);
     if (!canvas) return;
 
-    const rect = leaf.getBoundingClientRect();
-    const boxW = Math.max(200, Math.round(rect.width || this.measureBox().w));
-    const boxH = Math.max(260, Math.round(rect.height || this.measureBox().h));
+    // גודל אחיד לכל העלים שבחלון, כולל המוסתרים. מוכפל בזום כדי
+    // שמאגר הפיקסלים יתאים לגודל שבו העמוד באמת מוצג על המסך.
+    const box = this.leafBox();
+    const zoom = Reader.zoom || 1;
+    const boxW = Math.max(200, Math.round(box.w * zoom));
+    const boxH = Math.max(260, Math.round(box.h * zoom));
 
     const entry = { handle: null, canvas };
     this.live.set(idx, entry);
@@ -1217,10 +1278,17 @@ class FlipReader {
    */
   onResize() {
     if (!this.pageFlip || this._reinitializing) return;
-    const leafW = this.container.clientWidth / (this.isSpread() ? 2 : 1);
-    const tier = Math.min(2048, Math.ceil(leafW / 128) * 128);
-    if (tier === this.tier) return;
-    this.tier = tier;
+
+    /* הלוגיקה הקודמת מדדה container.clientWidth/2 וקיטלגה ל"מדרגות" של
+     * 128px. היא התעלמה מריפוד הבמה, מ-maxWidth ומאילוץ הגובה — ושינוי
+     * גובה בלבד (סיבוב מכשיר, שורת כתובת נעלמת) לא הפעיל ציור מחדש כלל.
+     * כאן משווים את גודל העלה האמיתי שבו צויר, כולל הזום. */
+    const box = this.leafBox();
+    const zoom = Reader.zoom || 1;
+    const wNow = box.w * zoom;
+    const prev = this._renderedBox;
+    if (prev && Math.abs(wNow - prev.w) / prev.w < 0.04) return;
+    this._renderedBox = { w: wNow, h: box.h * zoom };
 
     for (const idx of Array.from(this.live.keys())) this.evict(idx);
     let idx = 0;
@@ -1494,7 +1562,6 @@ const Reader = {
       case 'zoom-out':    this.setZoom(this.zoom - 0.15); break;
       case 'mode':        this.toggleMode(); break;
       case 'fullscreen':  this.toggleFullscreen(); break;
-      case 'print':       this.print(); break;
     }
   },
 
@@ -1538,8 +1605,9 @@ const Reader = {
     if (this.mode === 'scroll') {
       const sc = $('.scroller');
       if (sc) sc.style.setProperty('--scroll-w', `${Math.round(820 * this.zoom)}px`);
-      this.view?.onResize?.();
     }
+    // גם במצב ספר: בלי זה הזום רק מותח מפת פיקסלים קיימת ומטשטש אותה
+    this.view?.onResize?.();
     announce(`תצוגה ${Math.round(this.zoom * 100)} אחוז`);
   },
 
@@ -1553,21 +1621,20 @@ const Reader = {
 
   updateModeButton() {
     const btn = $('[data-act="mode"]');
+    if (!btn) return;
     const toScroll = this.mode === 'flip';
     btn.title = toScroll ? 'מעבר לתצוגת גלילה' : 'מעבר לתצוגת ספר';
-    btn.textContent = toScroll ? '☰' : '▤';
+    btn.setAttribute('aria-label', btn.title);
+    /* ⚠️ לא textContent: זה היה מוחק את ה-SVG שבתוך הלחצן ומשאיר אותו ריק.
+       מחליפים רק את ההפניה לסמל. */
+    const use = $('[data-mode-icon]', btn);
+    if (use) use.setAttribute('href', toScroll ? '#i-scroll' : '#i-book');
   },
 
   toggleFullscreen() {
     const el = $('#reader-view');
     if (!document.fullscreenElement) el.requestFullscreen?.().catch(() => {});
     else document.exitFullscreen?.();
-  },
-
-  /** הדפסה: פותחים את ה-PDF עצמו — הדפסת קנבס של ספר מדפדף אינה אמינה. */
-  print() {
-    const w = window.open(this.book.file, '_blank', 'noopener');
-    if (!w) toast('הדפדפן חסם את החלון. אפשר להוריד את הקובץ ולהדפיס ממנו.');
   },
 
   goTo(page) {
