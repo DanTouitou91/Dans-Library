@@ -216,8 +216,9 @@
      ספריות — מקומיות (vendor/), לא מ-CDN.
      מיקום מקומי חיוני: ה-worker של pdf.js חייב להיות באותו origin,
      ושתי גרסאות נעולות ב-git לעולם לא יתפצלו זו מזו.
+     PDF.js נטען כמודול (ESM) דרך pdfjs-init.mjs — ראו את ההסבר שם.
      ============================================================ -->
-<script src="vendor/pdfjs/pdf.min.js"></script>
+<script type="module" src="vendor/pdfjs/pdfjs-init.mjs"></script>
 <script src="vendor/page-flip/page-flip.browser.js"></script>
 <script src="script.js" defer></script>
 </body>

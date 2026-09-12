@@ -72,16 +72,16 @@ const CATALOG = [
   },
   {
     id: 'yahasim-beinleumiyim',
-    title: 'יחסים בינלאומיים',
+    title: 'יחסים בינלאומיים - מושגי יסוד',
     file: 'books/yahasim-beinleumiyim.pdf',
-    // TODO (דן): להחליף במקורות האמיתיים של הקורס.
     sources: [
-      'ספר הקורס, האוניברסיטה הפתוחה',
-      'מקבץ מאמרי חובה',
-      'סיכומי הרצאות ומפגשי הנחיה',
+      'פוליטיקה עולמית — מגמות ותמורות (קגלי ובלאנטון), ספר הקורס',
+      'שלושת הממ״נים והכתבות הנלוות',
+      'שתים־עשרה מצגות ההנחיה של המרצה',
     ],
     shelf: 'הקורסים שלי',
     spine: { color: '#1F3D2B', height: 0.94 },
+    note: 'קורס 10205, האוניברסיטה הפתוחה · חוברת הכנה למבחן',
   },
   {
     id: 'mavo-minhal-nihul-tziburi',
@@ -95,21 +95,6 @@ const CATALOG = [
     ],
     shelf: 'הקורסים שלי',
     spine: { color: '#3E2A5C', height: 1.02 },
-  },
-
-  /* --------------------------------------------------------------------------
-   * ספר הדגמה — נועד רק כדי שאפשר יהיה לבדוק שהקורא עובד לפני שהעלית
-   * ספרים אמיתיים. אפשר למחוק את הרשומה הזו ואת הקובץ
-   * books/demo-vintage.pdf ברגע שיש לך ספרים משלך.
-   * ------------------------------------------------------------------------ */
-  {
-    id: 'demo-vintage',
-    title: 'ספר הדגמה',
-    file: 'books/demo-vintage.pdf',
-    sources: ['קובץ הדגמה שנוצר אוטומטית — אפשר למחוק'],
-    shelf: 'מדף ההדגמה',
-    spine: { color: '#7A5C31', height: 0.86 },
-    note: 'רשומת הדגמה זמנית. מחק אותה מהמערך ב-script.js כשתעלה ספרים משלך.',
   },
 ];
 
@@ -579,11 +564,26 @@ const Card = {
  *  סדרתי. אינו יודע דבר על דפדוף או גלילה — שתי התצוגות משתמשות בו כמו שהוא.
  * ========================================================================== */
 
-const PDFJS = window.pdfjsLib;
+/**
+ * PDF.js נטען כמודול ESM (ראו vendor/pdfjs/pdfjs-init.mjs), ומודולים נטענים
+ * באופן אסינכרוני — אי אפשר להניח שהוא כבר קיים כשהקובץ הזה רץ. לכן ממתינים
+ * לו בעצלתיים, רק כשבאמת פותחים ספר, במקום לתפוס הפניה בזמן הטעינה.
+ */
+let _pdfjsWait = null;
 
-if (PDFJS) {
-  // ⚠️ ה-worker חייב להיות באותו origin. לכן הקובץ מקומי ולא מ-CDN.
-  PDFJS.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
+function whenPdfjsReady() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (_pdfjsWait) return _pdfjsWait;
+
+  _pdfjsWait = new Promise((resolve, reject) => {
+    const settle = () => resolve(window.pdfjsLib);
+    window.addEventListener('pdfjs-ready', settle, { once: true });
+    setTimeout(() => {
+      if (window.pdfjsLib) settle();
+      else reject(Object.assign(new Error('pdfjs-missing'), { code: 'pdfjs-missing' }));
+    }, 15000);
+  });
+  return _pdfjsWait;
 }
 
 /** מגבלות זיכרון: iOS מגביל את סך שטח הקנבסים בדף. */
@@ -665,11 +665,22 @@ class BookSource {
   }
 
   static async open(book, onProgress) {
-    if (!PDFJS) throw Object.assign(new Error('pdfjs-missing'), { code: 'pdfjs-missing' });
+    const PDFJS = await whenPdfjsReady();
 
     const task = PDFJS.getDocument({
       url: book.file,
       standardFontDataUrl: 'vendor/pdfjs/standard_fonts/',
+
+      /* ⚠️ אל תסירו את השורה הזו.
+       * כברירת מחדל PDF.js מזריק את הגופנים המוטמעים ב-PDF כ-@font-face
+       * ומצייר טקסט דרך ctx.font. אם הזרקת הגופן נכשלת — בגלל מדיניות CSP
+       * (font-src), בגלל FontFaceSet חסום, או בכל סיבה אחרת — הדפדפן מחליף
+       * בשקט לגופן חלופי. צורות האותיות עדיין נראות נכון, אבל רוחבי הקידום
+       * הם של הגופן החלופי, והתוצאה בעברית היא רווחים בתוך מילים.
+       * disableFontFace גורם ל-PDF.js לצייר כל סימן כנתיב וקטורי מתוך הגופן
+       * המוטמע עצמו — מדויק תמיד, וחסין לחלוטין למדיניות הגופנים של הדפדפן.
+       * נמדד: תוספת של כ-5ms לעמוד, בתוך תחום הרעש. */
+      disableFontFace: true,
       // טעינה מדורגת: מורידים רק את מה שקוראים בפועל
       disableStream: false,
       disableRange: false,
@@ -1710,9 +1721,9 @@ function init() {
 
   $('#btn-about')?.addEventListener('click', () => Layers.open($('#about-layer')));
 
-  if (!PDFJS) {
+  whenPdfjsReady().catch(() => {
     console.error('[library] pdf.js לא נטען — בדוק את vendor/pdfjs/');
-  }
+  });
 
   Router.init();
 }
