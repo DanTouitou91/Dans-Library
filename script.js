@@ -768,6 +768,46 @@ class BookSource {
   }
 
   /**
+   * פותח ספר, ומנסה שוב פעם אחת אם הניסיון הראשון נכשל.
+   * ⚠️ חיבור סלולרי נופל באמצע הורדה, ו-PDF.js לא מנסה שוב מעצמו —
+   * הכישלון הגיע למשתמש כ"ייתכן שהקובץ פגום". ניסיון שני פותר את רוב
+   * המקרים האלה. שגיאת "לא נמצא" אינה חולפת, ולכן עליה לא חוזרים.
+   */
+  static async openWithRetry(book, onProgress) {
+    try {
+      return await BookSource.open(book, onProgress);
+    } catch (err) {
+      if (err?.name === 'MissingPDFException') throw err;
+      console.warn('[reader] ניסיון פתיחה ראשון נכשל, מנסים שוב', err);
+      await new Promise((r) => setTimeout(r, 700));
+      return BookSource.open(book, onProgress);
+    }
+  }
+
+  /**
+   * מברר *מדוע* הפתיחה נכשלה, במקום לנחש.
+   * מחזיר מחרוזת קצרה שמוצגת למשתמש ונרשמת ביומן.
+   */
+  static async diagnose(url) {
+    try {
+      const res = await fetch(url, { headers: { Range: 'bytes=0-7' } });
+      if (res.status === 404) return 'הקובץ לא נמצא בשרת (404).';
+      if (!res.ok && res.status !== 206) return `השרת השיב בשגיאה ${res.status}.`;
+      const type = (res.headers.get('content-type') || '').toLowerCase();
+      const head = new Uint8Array(await res.arrayBuffer());
+      const magic = String.fromCharCode(...head.slice(0, 5));
+      if (magic !== '%PDF-') {
+        return type.includes('html')
+          ? 'השרת החזיר דף HTML במקום את הקובץ.'
+          : `מה שהתקבל אינו קובץ PDF (${type || 'ללא סוג'}).`;
+      }
+      return 'הקובץ תקין בשרת — ההורדה כנראה נקטעה באמצע.';
+    } catch {
+      return 'לא הצלחנו להגיע לשרת כלל — בדוק את החיבור לרשת.';
+    }
+  }
+
+  /**
    * דוגם כשבעה עמודים כדי לקבוע את יחס הגובה-רוחב של תיבת העלה.
    * חשוב לדגום גם עמוד 1 וגם עמוד 2 — בכריכות סרוקות הם שונים זה מזה,
    * ועמוד 1 לבדו הוא הדגימה הכי מטעה שיש.
@@ -964,58 +1004,50 @@ class ScrollReader {
 /* ============================================================================
  * §8 — FlipReader: תצוגת דפדוף (StPageFlip)
  * ----------------------------------------------------------------------------
- *  ✦ מדוע העמודים מוזנים בסדר הפוך ✦
+ *  ✦ כיצד מתקבל ספר עברי ✦
  *
  *  StPageFlip בנוי לספר לועזי (כריכה משמאל). הפיתוי הוא "לשקף" את הספר
  *  עם transform: scaleX(-1) — אבל זה שבור: הספרייה מחשבת את מיקום האצבע
  *  לפי getBoundingClientRect, ושיקוף לא משנה את המלבן הזה. התוצאה:
  *  התצוגה מתהפכת אבל הקלט לא, והעמוד "נתלש" מהצד ההפוך לאצבע.
  *
- *  הפתרון הנכון: ספר עברי וספר לועזי הם אותו עצם פיזי שנקרא מהקצה השני.
- *  לכן מזינים את העלים בסדר הפוך ולא נוגעים ב-transform בכלל. כך:
- *    · הכריכה יושבת בימין
- *    · עמוד 1 מופיע בצד ימין
- *    · בכל כפולה, העמוד הימני הוא בעל המספר הנמוך
- *    · גרירת הקצה השמאלי מקדמת את הספר — בדיוק כמו בספר אמיתי
+ *  ⚠️ תיקון מהותי: קודם הפכנו את *כל* מערך העלים. זה נתן מיקום נכון
+ *  (הנמוך מימין), אבל שיבש את האנימציה: "קדימה" נאלץ לקרוא ל-flipPrev,
+ *  שהיא אנימציית *החזרה* של הספרייה — והדף נסחף משמאל לימין, כלומר
+ *  כמו דפדוף אחורה בספר לועזי. נמדד על 16 פריימים רצופים: מרכז הדף
+ *  המתהפך נע מ-‎-404 ל-974 בזמן שהקורא התקדם מעמוד 6 לעמוד 8.
  *
- *  המחיר: flipNext של הספרייה הוא "אחורה" מבחינתנו. לכן עוטפים מיד.
+ *  התובנה: תנועת הדפדוף זהה בשתי השפות — תמיד מרימים את הדף הימני
+ *  ומעיפים אותו שמאלה. מה שמבדיל ספר עברי הוא *מספור* העמודים בלבד.
+ *  לכן אין להפוך את המערך, אלא רק להחליף את שני העמודים *בתוך* כל
+ *  כפולה: [ריק,1] [3,2] [5,4] ... [ריק,N]. כך מתקיימים יחד:
+ *    · הכריכה והעמוד האחרון עומדים כל אחד לבדו מימין
+ *    · בכל כפולה, העמוד הימני הוא בעל המספר הנמוך
+ *    · "קדימה" הוא flipNext — האנימציה הנכונה, מימין לשמאל
  * ========================================================================== */
 
 const PageFlipCtor = window.St?.PageFlip || window.PageFlip || null;
 
 /**
  * בונה את תוכנית העלים: מיפוי דו-כיווני בין אינדקס עלה למספר עמוד.
- * StPageFlip מזווג עלים (0,1), (2,3)... כשהאינדקס הנמוך משמאל.
- * כדי שעמוד 1 יעמוד לבדו בסוף (כמו כריכה קדמית של ספר עברי) הוא חייב
- * לשבת באינדקס זוגי — ולכן כשמספר העמודים זוגי מוסיפים עלה ריק בהתחלה.
+ * StPageFlip מזווג עלים (0,1), (2,3)... כשהאינדקס הזוגי משמאל והאי-זוגי
+ * מימין. הכפולות נשמרות בסדר הקריאה, ורק שני העמודים שבתוך כל כפולה
+ * מוחלפים — כך שהנמוך יושב מימין, כנדרש בעברית.
  */
 function buildLeafPlan(numPages) {
-  // StPageFlip מזווג עלים (0,1), (2,3)... כשהאינדקס הזוגי משמאל והאי-זוגי
-  // מימין. בספר עברי העמוד הנמוך מבין השניים יושב מימין, ולכן כל עמוד
-  // "ראשון בכפולה" חייב אינדקס אי-זוגי.
-  //
-  // שתי הכריכות עומדות כל אחת לבדה, כמו בספר אמיתי: עמוד 1 מימין עם
-  // עלה ריק לשמאלו, והעמוד האחרון — הכריכה האחורית — באותו אופן.
-  // ⚠️ קודם העמוד האחרון עמד לבדו רק כשמספר העמודים היה זוגי. בספר
-  // בן 111 עמודים הוא נצמד לעמוד 110, וזה מה שנראה שגוי.
   if (numPages <= 1) return [null, 1];
 
   const plan = [];
-  plan.push(null);          // בטנת הכריכה האחורית (שמאל)
-  plan.push(numPages);      // הכריכה האחורית — לבדה מימין
+  plan.push(null); plan.push(1);          // הכריכה הקדמית — לבדה מימין
 
-  // עמודי הפנים הם 2..numPages-1. אם מספרם אי-זוגי, הגבוה שבהם עומד
-  // אף הוא לבדו — אחרת תיווצר כפולה שבה העמוד הנמוך נוחת משמאל.
-  let top = numPages - 1;
-  if ((numPages - 2) % 2 !== 0) {
-    plan.push(null);
-    plan.push(top);
-    top -= 1;
+  // עמודי הפנים בזוגות: הנמוך מימין (אינדקס אי-זוגי), הגבוה משמאל.
+  let p = 2;
+  while (p <= numPages - 1) {
+    if (p + 1 <= numPages - 1) { plan.push(p + 1); plan.push(p); p += 2; }
+    else { plan.push(null); plan.push(p); p += 1; }   // עמוד פנים יחיד שנותר
   }
-  for (let p = top; p >= 2; p--) plan.push(p);
 
-  plan.push(null);          // בטנת הכריכה הקדמית (שמאל)
-  plan.push(1);             // הכריכה עצמה (ימין)
+  plan.push(null); plan.push(numPages);   // הכריכה האחורית — לבדה מימין
   return plan;
 }
 
@@ -1206,9 +1238,7 @@ class FlipReader {
     try { return this.pageFlip?.getOrientation() === 'portrait'; } catch { return false; }
   }
 
-  // ⚠️ הכיוון הפוך מהספרייה — ראו ההסבר בראש הסעיף.
-  //
-  // ⚠️⚠️ ובמסך צר אי אפשר להשתמש ב-flipPrev בכלל. מקור האמת הוא הקוד
+  // ⚠️ במסך צר אי אפשר להשתמש ב-flipPrev בכלל. מקור האמת הוא הקוד
   // של הספרייה: flipPrev מדמה מגע בנקודה x=10, כלומר בחצי השמאלי של
   // תיבת הספר. בתצוגת פורטרט StPageFlip מציב את העלה היחיד בחצי הימני
   // (setLeftPage(null)), ולכן בנקודה הזו אין עמוד — והקריאה לא עושה
@@ -1216,11 +1246,11 @@ class FlipReader {
   // לכן במסך צר מנווטים לפי מספר עמוד, שם כל כפולה היא עמוד אחד ממילא.
   advance() {
     if (this.isPortrait()) { this.goTo(Math.min(this.current + 1, this.source.numPages)); return; }
-    try { this.pageFlip.flipPrev('top'); } catch (e) { this.fail(e); }
+    try { this.pageFlip.flipNext('top'); } catch (e) { this.fail(e); }
   }
   retreat() {
     if (this.isPortrait()) { this.goTo(Math.max(this.current - 1, 1)); return; }
-    try { this.pageFlip.flipNext('top'); } catch (e) { this.fail(e); }
+    try { this.pageFlip.flipPrev('top'); } catch (e) { this.fail(e); }
   }
 
   goTo(page, { animate = true } = {}) {
@@ -1250,8 +1280,12 @@ class FlipReader {
     // ⚠️ רק בתצוגת כפולה. בתצוגת פורטרט כל כפולה היא עמוד אחד ממילא,
     // ולכן התנאי היה מתקיים תמיד — והספר כולו הוזז ב-25% שמאלה בכל
     // עמוד, עד כדי חריגה אל מחוץ לקצה המסך. זה מה שנראה כ"סטייה".
-    this.host?.classList.toggle(
-      'is-closed', this.isSpread() && this.spreadPages(centerIdx).length === 1);
+    // רק שתי הכריכות ממורכזות. בספר עם מספר אי-זוגי של עמודי פנים יש
+    // גם עמוד פנים יחיד בכפולה משלו, והוא אינו "ספר סגור".
+    const solo = this.spreadPages(centerIdx);
+    const isCover = solo.length === 1 &&
+      (solo[0] === 1 || solo[0] === this.source.numPages);
+    this.host?.classList.toggle('is-closed', this.isSpread() && isCover);
 
     const RADIUS = 2, KEEP = TOUCH_DEVICE ? 3 : 4;
     const spread = this.isSpread() ? 1 : 0;
@@ -1527,7 +1561,7 @@ const Reader = {
     $('#reader-stage').replaceChildren();
 
     try {
-      this.source = await BookSource.open(book, ({ loaded, total }) => {
+      this.source = await BookSource.openWithRetry(book, ({ loaded, total }) => {
         if (total) {
           const pct = Math.round((loaded / total) * 100);
           $('[data-loader-progress]').textContent = `${pct}%`;
@@ -1615,9 +1649,19 @@ const Reader = {
     $('[data-fault-text]').innerHTML = missing
       ? `הקובץ <code>${escapeHtml(this.book?.file || '')}</code> לא קיים. ` +
         'העלה אותו לתיקייה <code>books/</code> ובצע push מחדש.'
-      : 'ייתכן שהקובץ פגום או שהחיבור נקטע. אפשר לנסות לרענן את הדף.';
+      : 'לא הצלחנו לקרוא את הקובץ. בודקים מה קרה…';
     $('#fault').hidden = false;
     console.warn('[reader] open failed', err);
+
+    // מבררים את הסיבה האמיתית ומעדכנים את ההודעה. בלי זה כל תקלה
+    // שאינה 404 קיבלה את אותו משפט כללי, ואי אפשר היה לדעת ממנו כלום.
+    if (!missing && this.book?.file) {
+      BookSource.diagnose(this.book.file).then((why) => {
+        if ($('#fault').hidden) return;   // הספר נפתח בינתיים
+        $('[data-fault-text]').textContent = `${why} אפשר לנסות לרענן את הדף.`;
+        console.warn('[reader] אבחון:', why);
+      });
+    }
   },
 
   currentPage() {
