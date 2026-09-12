@@ -155,7 +155,7 @@ function toast(message, actionLabel, onAction, timeout = 7000) {
  * ----------------------------------------------------------------------------
  *  מפתחות:
  *    dl:schema                     גרסת הסכמה הגלובלית
- *    dl:settings                   { v, theme, readerMode }
+ *    dl:settings                   { v, theme, readerMode, zoom }
  *    dl:book:<id>:state            { v, lastPage, totalPages, openedAt }
  *    dl:book:<id>:notes            { v, text }
  *    dl:book:<id>:marks            { v, pages: [] }
@@ -265,7 +265,7 @@ const Store = (() => {
     get available() { return available; },
 
     settings() {
-      return read('settings', { theme: 'auto', readerMode: 'auto' });
+      return read('settings', { theme: 'auto', readerMode: 'auto', zoom: 1 });
     },
     saveSettings(patch) {
       return write('settings', { ...this.settings(), ...patch });
@@ -990,14 +990,32 @@ const PageFlipCtor = window.St?.PageFlip || window.PageFlip || null;
  * לשבת באינדקס זוגי — ולכן כשמספר העמודים זוגי מוסיפים עלה ריק בהתחלה.
  */
 function buildLeafPlan(numPages) {
+  // StPageFlip מזווג עלים (0,1), (2,3)... כשהאינדקס הזוגי משמאל והאי-זוגי
+  // מימין. בספר עברי העמוד הנמוך מבין השניים יושב מימין, ולכן כל עמוד
+  // "ראשון בכפולה" חייב אינדקס אי-זוגי.
+  //
+  // שתי הכריכות עומדות כל אחת לבדה, כמו בספר אמיתי: עמוד 1 מימין עם
+  // עלה ריק לשמאלו, והעמוד האחרון — הכריכה האחורית — באותו אופן.
+  // ⚠️ קודם העמוד האחרון עמד לבדו רק כשמספר העמודים היה זוגי. בספר
+  // בן 111 עמודים הוא נצמד לעמוד 110, וזה מה שנראה שגוי.
+  if (numPages <= 1) return [null, 1];
+
   const plan = [];
-  // StPageFlip מזווג עלים (0,1), (2,3)... כשהאינדקס הזוגי משמאל והאי-זוגי מימין.
-  // עמוד 1 הוא הכריכה הקדמית של ספר עברי ולכן חייב לשבת מימין —
-  // כלומר באינדקס אי-זוגי (וכך אכן יוצא מהחישוב שלמטה). העלה הריק שלפניו הוא בטנת הכריכה, בדיוק כמו בספר אמיתי.
-  if (numPages % 2 === 0) plan.push(null);          // איזון זוגיות
-  for (let p = numPages; p >= 2; p--) plan.push(p); // שאר העמודים בסדר הפוך
-  plan.push(null);                                  // בטנת הכריכה (שמאל)
-  plan.push(1);                                     // הכריכה עצמה (ימין)
+  plan.push(null);          // בטנת הכריכה האחורית (שמאל)
+  plan.push(numPages);      // הכריכה האחורית — לבדה מימין
+
+  // עמודי הפנים הם 2..numPages-1. אם מספרם אי-זוגי, הגבוה שבהם עומד
+  // אף הוא לבדו — אחרת תיווצר כפולה שבה העמוד הנמוך נוחת משמאל.
+  let top = numPages - 1;
+  if ((numPages - 2) % 2 !== 0) {
+    plan.push(null);
+    plan.push(top);
+    top -= 1;
+  }
+  for (let p = top; p >= 2; p--) plan.push(p);
+
+  plan.push(null);          // בטנת הכריכה הקדמית (שמאל)
+  plan.push(1);             // הכריכה עצמה (ימין)
   return plan;
 }
 
@@ -1229,7 +1247,11 @@ class FlipReader {
     // ספר סגור: כשהכפולה הנוכחית מכילה רק את הכריכה, מסמנים את המארח
     // כדי ש-CSS יוסיף צל שמושיב את הספר על השולחן. הסימון יורד ברגע
     // שהספר נפתח, ולכן הצל לעולם לא מתערבב באנימציית הדפדוף.
-    this.host?.classList.toggle('is-closed', this.spreadPages(centerIdx).length === 1);
+    // ⚠️ רק בתצוגת כפולה. בתצוגת פורטרט כל כפולה היא עמוד אחד ממילא,
+    // ולכן התנאי היה מתקיים תמיד — והספר כולו הוזז ב-25% שמאלה בכל
+    // עמוד, עד כדי חריגה אל מחוץ לקצה המסך. זה מה שנראה כ"סטייה".
+    this.host?.classList.toggle(
+      'is-closed', this.isSpread() && this.spreadPages(centerIdx).length === 1);
 
     const RADIUS = 2, KEEP = TOUCH_DEVICE ? 3 : 4;
     const spread = this.isSpread() ? 1 : 0;
@@ -1527,6 +1549,8 @@ const Reader = {
   },
 
   decideMode() {
+    // שחזור רמת הזום שנשמרה, לפני בניית התצוגה
+    this.zoom = clamp(Number(Store.settings().zoom) || 1, 0.6, 2.5);
     const pref = Store.settings().readerMode || 'auto';
     if (pref === 'scroll') return 'scroll';
     if (this.flipFailed || window.__DL_FLIP_FAILED) return 'scroll';
@@ -1662,6 +1686,10 @@ const Reader = {
 
   setZoom(z) {
     this.zoom = clamp(Number(z.toFixed(2)), 0.6, 2.5);
+    // הזום נשמר. במסך של טלפון עמוד A4 מעוצב יוצא קטן, ודן היה צריך
+    // להגדיל מחדש בכל פתיחה של ספר. הקנבס מצויר מחדש ברזולוציה של
+    // הזום (ראו onResize), ולכן ההגדלה מוסיפה חדות ולא מתיחה.
+    Store.saveSettings({ zoom: this.zoom });
     const wrap = $('.stage__zoom') || $('.scroller');
     if (wrap) wrap.style.setProperty('--zoom', String(this.zoom));
     if (this.mode === 'scroll') {
