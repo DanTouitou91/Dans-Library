@@ -32,10 +32,73 @@
       <feTurbulence type="fractalNoise" baseFrequency="0.02 0.35" numOctaves="5" result="n"/>
       <feColorMatrix in="n" type="saturate" values="0"/>
     </filter>
+    <!-- ===== מנורת הספרייה =====
+         Banker's lamp: בסיס וזרוע פליז, אהיל זכוכית ירוקה, נורה ושרשרת משיכה.
+         מוגדרת פעם אחת כ-symbol ומשמשת גם במדף וגם בסרגל הקריאה. -->
+    <linearGradient id="lampBrass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5E4622"/>
+      <stop offset=".22" stop-color="#E8CE8F"/>
+      <stop offset=".46" stop-color="#B08D57"/>
+      <stop offset=".74" stop-color="#8A6A3B"/>
+      <stop offset="1" stop-color="#4A3517"/>
+    </linearGradient>
+    <linearGradient id="lampShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#356B4C"/>
+      <stop offset=".42" stop-color="#1F3D2B"/>
+      <stop offset="1" stop-color="#122419"/>
+    </linearGradient>
+    <linearGradient id="lampShadeLip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C7E3CF" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#8FBFA3" stop-opacity=".15"/>
+    </linearGradient>
+    <radialGradient id="lampBulbGlow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#FFF3CE"/>
+      <stop offset=".45" stop-color="#FFD98A" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#FFC45C" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="lampBloom" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="4.5"/>
+    </filter>
+
+    <symbol id="lamp-art" viewBox="0 0 120 148">
+      <!-- בסיס -->
+      <ellipse class="lamp-shadow" cx="60" cy="139" rx="36" ry="6"/>
+      <path d="M28 138q0-9 10-11h44q10 2 10 11z" fill="url(#lampBrass)"/>
+      <ellipse cx="60" cy="126" rx="26" ry="5" fill="url(#lampBrass)"/>
+      <!-- זרוע -->
+      <rect x="56" y="64" width="8" height="62" rx="4" fill="url(#lampBrass)"/>
+      <circle cx="60" cy="66" r="6" fill="url(#lampBrass)"/>
+      <!-- זוהר מתחת לאהיל (רק כשדולק) -->
+      <ellipse class="lamp-pool" cx="60" cy="70" rx="40" ry="16" fill="url(#lampBulbGlow)"/>
+      <!-- נורה וחוט להט -->
+      <g class="lamp-bulb">
+        <ellipse class="lamp-bulb__halo" cx="60" cy="62" rx="15" ry="11"
+                 fill="url(#lampBulbGlow)" filter="url(#lampBloom)"/>
+        <path class="lamp-filament" d="M54 60q3-6 6 0t6 0" fill="none"
+              stroke="#FFEEC0" stroke-width="1.6" stroke-linecap="round"/>
+      </g>
+      <!-- אהיל זכוכית -->
+      <path d="M18 58q0-34 42-34t42 34z" fill="url(#lampShade)"/>
+      <path d="M18 58q0-34 42-34t42 34z" fill="none" stroke="#0E1C14" stroke-width="1.5"/>
+      <path class="lamp-sheen" d="M30 54q4-24 24-27" fill="none"
+            stroke="url(#lampShadeLip)" stroke-width="5" stroke-linecap="round"/>
+      <rect x="16" y="54" width="88" height="7" rx="3.5" fill="url(#lampBrass)"/>
+      <!-- שרשרת משיכה -->
+      <g class="lamp-chain">
+        <line x1="95" y1="60" x2="95" y2="86" stroke="#8A6A3B" stroke-width="1.8"/>
+        <circle cx="95" cy="90" r="4.5" fill="url(#lampBrass)"/>
+      </g>
+    </symbol>
   </defs>
 </svg>
 
 <!-- אזור הכרזות לקוראי מסך (שינויי עמוד, הודעות מצב) -->
+<!-- שכבות האור של המנורה. pointer-events:none כדי שלא יחסמו קליקים. -->
+<div class="lamplight" aria-hidden="true">
+  <span class="lamplight__cone"></span>
+  <span class="lamplight__glow"></span>
+</div>
+
 <div id="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- ============================================================
@@ -54,9 +117,12 @@
         <span class="btn__icon" aria-hidden="true">❦</span>
         <span class="btn__label">אודות</span>
       </button>
-      <button type="button" class="btn btn--brass" id="btn-theme" aria-pressed="false">
-        <span class="btn__icon" aria-hidden="true" data-theme-icon>☾</span>
-        <span class="btn__label" data-theme-label>מצב כהה</span>
+      <button type="button" class="lamp" data-lamp-toggle aria-pressed="true"
+              aria-label="כיבוי מנורת הספרייה" title="כיבוי המנורה">
+        <svg class="lamp__art" viewBox="0 0 120 148" aria-hidden="true" focusable="false">
+          <use href="#lamp-art"/>
+        </svg>
+        <span class="lamp__label" data-lamp-label>כבה אור</span>
       </button>
     </div>
   </header>
@@ -136,7 +202,7 @@
   <div class="toolbar" role="toolbar" aria-label="כלי הקריאה">
     <div class="toolbar__group">
       <button type="button" class="btn btn--wood" data-act="back" title="חזרה למדף">
-        <span class="btn__icon" aria-hidden="true">❰</span>
+        <span class="btn__icon" aria-hidden="true">▶</span>
         <span class="btn__label">למדף</span>
       </button>
       <h2 class="toolbar__title" data-reader-title></h2>
@@ -164,10 +230,15 @@
       </button>
       <button type="button" class="btn btn--brass btn--icon" data-act="zoom-out" title="הקטנה" aria-label="הקטנה">−</button>
       <button type="button" class="btn btn--brass btn--icon" data-act="zoom-in" title="הגדלה" aria-label="הגדלה">+</button>
+      <button type="button" class="btn btn--brass btn--icon lamp lamp--mini" data-lamp-toggle
+              aria-pressed="true" aria-label="כיבוי מנורת הספרייה" title="כיבוי המנורה">
+        <svg class="lamp__art" viewBox="0 0 120 148" aria-hidden="true" focusable="false">
+          <use href="#lamp-art"/>
+        </svg>
+      </button>
       <button type="button" class="btn btn--brass btn--icon" data-act="mode" title="מעבר לתצוגת גלילה" aria-label="החלפת תצוגה">☰</button>
       <button type="button" class="btn btn--brass btn--icon" data-act="fullscreen" title="מסך מלא" aria-label="מסך מלא">⛶</button>
       <button type="button" class="btn btn--brass btn--icon" data-act="print" title="הדפסה" aria-label="הדפסה">⎙</button>
-      <a class="btn btn--brass btn--icon" data-act="download" title="הורדה" aria-label="הורדה" download>⭳</a>
     </div>
   </div>
 

@@ -16,8 +16,14 @@
      12. התאמה לנייד + נגישות
 
    הערה על כיווניות: כל המרווחים משתמשים במאפיינים לוגיים
-   (margin-inline, inset-inline, padding-block) ולכן אין צורך בגיליון
-   נפרד ל-RTL — הדפדפן מטפל בהיפוך לבד לפי dir="rtl".
+   (margin-inline, inset-inline, padding-block), והדפדפן מהפך אותם לבד
+   לפי dir="rtl".
+   ⚠️ אבל זה נכון רק למודל הקופסה. אלה **תמיד פיזיים** ולא מתהפכים:
+       transform / translateX · box-shadow (היסט אופקי) · transform-origin
+       · linear-gradient(to left|right) · border-radius (פינות)
+       · background-position · clip-path
+   כל באג RTL שהיה בקובץ הזה ישב באחד מהם. בכל אחד מהמקרים האלה יש
+   הערה שמסבירה לאיזה צד הוא מכוון ולמה.
    ============================================================================ */
 
 /* ---------- 1. משתנים, פלטה ונושאים ---------- */
@@ -69,8 +75,26 @@
   color-scheme: light;
 }
 
-/* הנושא הכהה: מהגוני עמוק במקום נייר מצהיב */
+/* הנושא הכהה = המנורה כבויה.
+   ⚠️ חייבים להגדיר מחדש גם את סולם העץ, הפליז והדיו: כל המשטחים הגדולים
+   צורכים אותם ישירות, ובלי זה כיבוי המנורה כמעט לא משנה כלום. */
 :root[data-theme="dark"] {
+  --wood-dark:  #140D07;
+  --wood:       #201409;
+  --wood-mid:   #2A1B0E;
+  --wood-light: #33210F;
+  --wood-pale:  #493018;
+
+  --brass:      #8A6E42;
+  --brass-lt:   #C3A76E;
+  --brass-dk:   #4E3B21;
+
+  --burgundy:    #5A1622;
+  --burgundy-lt: #78202E;
+
+  --ink:        #E6D5B8;
+  --ink-soft:   #B49B78;
+
   --paper:      #2A1B12;
   --paper-deep: #1F140D;
   --paper-edge: #5A4028;
@@ -395,7 +419,9 @@ ul { margin: 0; padding: 0; list-style: none; }
   font-weight: 700;
   letter-spacing: .045em;
   line-height: 1.15;
-  max-block-size: 100%;
+  /* ⚠️ תחת writing-mode: vertical-rl ציר הבלוק הוא אופקי, ולכן
+     max-block-size היה מגביל את הרוחב. הגובה הוא ציר ה-inline. */
+  max-inline-size: 100%;
   overflow: hidden;
   text-shadow: 0 1px 1px rgba(0,0,0,.75), 0 -1px 0 rgba(255,255,255,.22);
   background: linear-gradient(180deg, #F4E2AE, var(--brass) 60%, #8A6A3B);
@@ -466,7 +492,7 @@ ul { margin: 0; padding: 0; list-style: none; }
   padding: clamp(1.6rem, 4vw, 2.6rem) clamp(1.3rem, 4vw, 2.4rem) clamp(1.2rem, 3vw, 1.8rem);
   border-radius: 3px;
   color: var(--ink);
-  background-color: #F6EBD2;
+  background-color: var(--paper);
   /* שורות דהויות של כרטיס קטלוג */
   background-image:
     repeating-linear-gradient(180deg,
@@ -594,7 +620,7 @@ ul { margin: 0; padding: 0; list-style: none; }
   position: relative;
   padding: clamp(1.6rem, 4.5vw, 3.2rem) clamp(1.3rem, 4.5vw, 3rem);
   color: var(--ink);
-  background-color: #F4E8D0;
+  background-color: var(--paper);
   background-image:
     radial-gradient(ellipse at 12% 8%, rgba(160,120,60,.17), transparent 46%),
     radial-gradient(ellipse at 88% 90%, rgba(140,100,50,.15), transparent 44%);
@@ -607,10 +633,22 @@ ul { margin: 0; padding: 0; list-style: none; }
 /* קו הכריכה (ה"תפר") בצד הפנימי */
 .tome__page::before {
   content: "";
-  position: absolute; inset-block: 0; inset-inline-end: 0;
+  position: absolute; inset-block: 0; inset-inline-start: 0;
   inline-size: 22px;
+  /* ⚠️ פיזי: הגרדיאנט לא מתהפך. הרצועה יושבת בימין (השדרה בספר עברי),
+     ולכן הכהות חייבת להיות בקצה הימני שלה ולדהות שמאלה אל תוך הדף. */
   background: linear-gradient(to left, rgba(90,60,30,.3), transparent);
   pointer-events: none;
+}
+
+.tome::after {
+  content: "";
+  position: absolute; inset-inline: 0; inset-block-end: 0;
+  block-size: 40px;
+  pointer-events: none;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(to top, var(--paper), transparent);
+  opacity: .95;
 }
 
 .tome__title {
@@ -638,7 +676,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 .tome__close {
   position: absolute;
-  inset-block-start: -10px; inset-inline-start: -10px;
+  inset-block-start: -10px; inset-inline-end: -10px;
   z-index: 2;
   inline-size: 34px; block-size: 34px;
   border-radius: 50%; border: none;
@@ -711,7 +749,10 @@ ul { margin: 0; padding: 0; list-style: none; }
   flex: 1 1 auto;
   position: relative;
   display: grid;
-  place-items: center;
+  /* ⚠️ place-items:center לא מייצר גלילה לכיוון inline-start, שב-RTL הוא
+     הצד הימני — שם מתחילה כל שורה בעברית. בזום היא הייתה בלתי נגישה. */
+  align-items: center;
+  justify-items: start;
   padding: clamp(.5rem, 2vw, 1.6rem);
   overflow: auto;
   min-block-size: 0;   /* מאפשר לגריד להתכווץ בתוך flex */
@@ -720,6 +761,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 /* מעטפת הזום: מוחלת על תצוגת הדפדוף */
 .stage__zoom {
+  margin-inline: auto;
   transform: scale(var(--zoom, 1));
   transform-origin: center top;
   transition: transform .2s ease;
@@ -745,7 +787,10 @@ ul { margin: 0; padding: 0; list-style: none; }
   background-image:
     radial-gradient(ellipse at 20% 12%, rgba(160,120,60,.10), transparent 48%),
     radial-gradient(ellipse at 80% 88%, rgba(140,100,50,.09), transparent 45%);
-  box-shadow: inset 0 0 34px rgba(120,85,40,.16);
+  /* ויניטה פנימית שמרככת את המפגש בין הדף לרקע, כדי שלא ייראה "גזור" */
+  box-shadow:
+    inset 0 0 58px rgba(90,60,25,.20),
+    inset 0 0 0 1px rgba(120,85,40,.14);
 }
 
 .leaf-canvas { display: block; max-inline-size: 100%; max-block-size: 100%; }
@@ -762,17 +807,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 @keyframes shimmer { from { background-position: 200% 0 } to { background-position: -60% 0 } }
 
-/* מספר העמוד בתחתית העלה */
-.leaf-folio {
-  position: absolute;
-  inset-block-end: 6px; inset-inline: 0;
-  text-align: center;
-  font-family: var(--font-ui);
-  font-size: .62rem;
-  color: var(--ink-soft);
-  opacity: .55;
-  pointer-events: none;
-}
+/* אין כאן מספר עמוד משלנו: לספרים של דן יש כותרת תחתונה משלהם, והמספר
+   הצף נחת בדיוק עליה. מספר העמוד מוצג בסרגל הכלים. */
 
 /* עלה ריק (כריכה פנימית) */
 .leaf[data-blank="true"] .leaf-inner {
@@ -793,8 +829,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 .scroller .leaf {
   inline-size: min(var(--scroll-w, 820px), 100%);
-  box-shadow: var(--shadow-mid);
-  border-radius: 2px;
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(0,0,0,.28), 0 14px 40px rgba(0,0,0,.45);
 }
 .scroller .leaf-inner { min-block-size: 120px; }
 
@@ -810,12 +846,14 @@ ul { margin: 0; padding: 0; list-style: none; }
   padding: 1rem clamp(.9rem, 2vw, 1.3rem) 1rem;
   color: var(--ink);
   /* קלף: נייר מצהיב עם קצה קרוע-כהה בצד הפנימי */
-  background-color: #EFE0C0;
+  background-color: var(--paper);
   background-image:
     repeating-linear-gradient(180deg, transparent 0 33px, rgba(120,140,150,.2) 33px 34px),
     radial-gradient(ellipse at 10% 6%, rgba(160,120,60,.2), transparent 48%),
     radial-gradient(ellipse at 90% 94%, rgba(140,100,50,.18), transparent 45%);
-  box-shadow: -14px 0 32px rgba(0,0,0,.5), inset 3px 0 0 rgba(120,85,40,.3);
+  /* ⚠️ פיזי: inset-inline-end מעגן את הפאנל בשמאל ב-RTL, ולכן הצל חייב
+     ליפול ימינה (אל התוכן) והקצה ה"קרוע" לשבת בקצה הימני שפונה לספר. */
+  box-shadow: 14px 0 32px rgba(0,0,0,.5), inset -3px 0 0 rgba(120,85,40,.3);
   animation: slide-in .26s cubic-bezier(.2,.9,.3,1.05) both;
 }
 
@@ -823,8 +861,6 @@ ul { margin: 0; padding: 0; list-style: none; }
   from { opacity: 0; transform: translateX(-26px) }
   to   { opacity: 1; transform: none }
 }
-:root[dir] .notepad { /* ב-RTL הפאנל נכנס מימין */ }
-
 .notepad__head {
   display: flex; align-items: center; justify-content: space-between;
   gap: .5rem;
@@ -880,7 +916,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .bookmark-ribbon {
   position: absolute;
   inset-block-start: -2px;
-  inset-inline-end: 11%;
+  inset-inline-start: 11%;   /* יוצאת מצד השדרה, לא מהקצה הפתוח */
   z-index: 3;
   inline-size: 24px; block-size: 74px;
   border: none; padding: 0;
@@ -888,7 +924,7 @@ ul { margin: 0; padding: 0; list-style: none; }
   background: linear-gradient(180deg, #A32236 0%, var(--burgundy-lt) 40%, #5E0F1C 100%);
   /* קצה תחתון מפוצל כמו סרט בד */
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
-  box-shadow: 2px 2px 7px rgba(0,0,0,.5);
+  box-shadow: 0 2px 7px rgba(0,0,0,.5);
   transition: block-size .2s ease, filter .2s ease;
   transform-origin: top center;
 }
@@ -931,19 +967,21 @@ ul { margin: 0; padding: 0; list-style: none; }
   position: absolute;
   inset-block: 0; inset-inline-end: 50%;
   inline-size: 42px;
-  background: linear-gradient(90deg, var(--paper-edge), var(--paper));
-  border-radius: 2px 0 0 2px;
-  transform-origin: right center;
+  background: linear-gradient(270deg, var(--paper-edge), var(--paper));
+  /* ⚠️ פיזי: ב-RTL ה-inset-inline-end שלמעלה שם את העלה בחצי הימני, ולכן
+     הקצה שבמרכז (השדרה) הוא השמאלי — שם חייב לשבת ציר הסיבוב. */
+  border-radius: 0 2px 2px 0;
+  transform-origin: left center;
   animation: turn-leaf 1.9s cubic-bezier(.45,.05,.55,.95) infinite;
-  box-shadow: -2px 2px 7px rgba(0,0,0,.45);
+  box-shadow: 2px 2px 7px rgba(0,0,0,.45);
 }
 .loader__leaf:nth-child(2) { animation-delay: .28s; }
 .loader__leaf:nth-child(3) { animation-delay: .56s; }
 
 @keyframes turn-leaf {
-  0%        { transform: rotateY(0deg);    opacity: 1 }
+  0%        { transform: rotateY(0deg);   opacity: 1 }
   48%       { opacity: 1 }
-  60%, 100% { transform: rotateY(-168deg); opacity: .15 }
+  60%, 100% { transform: rotateY(168deg); opacity: .15 }
 }
 
 /* כריכת הספר מאחורי הדפים */
@@ -1028,22 +1066,191 @@ ul { margin: 0; padding: 0; list-style: none; }
   line-height: 1;
 }
 
+
+/* ============================================================================
+   מנורת הספרייה — מקור האור של הדף
+   ----------------------------------------------------------------------------
+   הכל נשען על משתנה אחד, --lamp (0 כבויה / 1 דולקת), שנקבע מ-data-lamp
+   על <html>. ההבהוב בהדלקה וזוהר השארית בכיבוי רצים רק במעבר יזום
+   (data-lamp-anim), לא בטעינת הדף.
+   ============================================================================ */
+
+:root {
+  --lamp: 1;
+  --lamp-x: 15%;   /* מיקום מקור האור במסך — משתנה בנייד */
+  --lamp-y: 8%;
+}
+:root[data-lamp="off"] { --lamp: 0; }
+
+/* --- שכבות האור --- */
+.lamplight {
+  position: fixed; inset: 0;
+  z-index: 4;
+  pointer-events: none;   /* חובה: אחרת השכבה חוסמת כל לחיצה */
+}
+
+.lamplight__glow,
+.lamplight__cone {
+  position: absolute; inset: 0;
+  display: block;
+  mix-blend-mode: screen;
+  transition: opacity .45s ease;
+}
+
+/* אור אמיתי אין לו קצה חד. שתי השכבות הן גרדיאנטים רדיאליים עם דעיכה
+   ארוכה בלבד — בלי clip-path ובלי שום צורה גאומטרית שאפשר לזהות. */
+
+/* הילה כללית: מרככת את כל החדר */
+.lamplight__glow {
+  background: radial-gradient(100vmax 80vmax at var(--lamp-x) var(--lamp-y),
+    rgba(255,206,132,.14), rgba(255,170,80,.05) 38%, transparent 68%);
+  opacity: var(--lamp);
+}
+
+/* אלומה: אליפסה מוארכת כלפי מטה מהאהיל, עם דעיכה רכה מאוד */
+.lamplight__cone {
+  background:
+    radial-gradient(34vmax 62vmax at var(--lamp-x) calc(var(--lamp-y) + 6%),
+      rgba(255,224,164,.16), rgba(255,206,132,.06) 42%, transparent 72%),
+    radial-gradient(13vmax 11vmax at var(--lamp-x) var(--lamp-y),
+      rgba(255,238,200,.26), transparent 70%);
+  opacity: var(--lamp);
+}
+
+/* --- לחצן המנורה --- */
+.lamp {
+  display: inline-flex; flex-direction: column; align-items: center;
+  gap: .15rem;
+  cursor: pointer;
+}
+.lamp:not(.lamp--mini) { background: none; border: 0; padding: .2rem .5rem; }
+
+.lamp__art {
+  inline-size: clamp(60px, 7.5vw, 88px);
+  block-size: auto;
+  display: block;
+  filter: drop-shadow(0 7px 12px rgba(0,0,0,.55));
+  transition: filter .45s ease;
+}
+:root[data-lamp="on"] .lamp__art {
+  filter: drop-shadow(0 7px 12px rgba(0,0,0,.55))
+          drop-shadow(0 0 14px rgba(255,196,110,.45));
+}
+
+.lamp__label {
+  font-family: var(--font-ui);
+  font-size: .6rem; letter-spacing: .18em;
+  color: var(--brass);
+  white-space: nowrap;
+}
+
+/* --- חלקי הציור שמגיבים למצב --- */
+.lamp-shadow { fill: rgba(0,0,0,.42); }
+
+.lamp-bulb, .lamp-pool {
+  opacity: var(--lamp);
+  transition: opacity .45s ease;
+}
+.lamp-filament { stroke: #FFEEC0; transition: stroke .45s ease; }
+:root[data-lamp="off"] .lamp-filament { stroke: #6E5B3A; }
+
+.lamp-sheen { opacity: .85; }
+
+/* שרשרת המשיכה — נמשכת בלחיצה */
+.lamp-chain { transition: transform .16s cubic-bezier(.3,1.6,.5,1); }
+.lamp:active .lamp-chain { transform: translateY(4px); }
+
+/* --- ריאליזם: חוט להט מתחמם, ואז מתקרר --- */
+@keyframes lamp-warming {
+  0%   { opacity: 0 }
+  10%  { opacity: .8 }
+  18%  { opacity: .2 }
+  30%  { opacity: .95 }
+  42%  { opacity: .5 }
+  60%  { opacity: 1 }
+  100% { opacity: 1 }
+}
+@keyframes lamp-cooling {
+  0%   { opacity: 1 }
+  15%  { opacity: .3 }
+  40%  { opacity: .18 }   /* זוהר שארית בזמן שהחוט מתקרר */
+  100% { opacity: 0 }
+}
+
+:root[data-lamp-anim="warming"] .lamp-bulb,
+:root[data-lamp-anim="warming"] .lamp-pool,
+:root[data-lamp-anim="warming"] .lamplight__glow,
+:root[data-lamp-anim="warming"] .lamplight__cone {
+  animation: lamp-warming .6s ease-out both;
+}
+:root[data-lamp-anim="cooling"] .lamp-bulb,
+:root[data-lamp-anim="cooling"] .lamp-pool,
+:root[data-lamp-anim="cooling"] .lamplight__glow,
+:root[data-lamp-anim="cooling"] .lamplight__cone {
+  animation: lamp-cooling .8s ease-in both;
+}
+
+/* --- גרסה קטנה בסרגל הקריאה --- */
+.lamp--mini { flex-direction: row; gap: 0; }
+.lamp--mini .lamp__art { inline-size: 1.45em; filter: none; }
+:root[data-lamp="on"] .lamp--mini .lamp__art {
+  filter: drop-shadow(0 0 5px rgba(255,196,110,.75));
+}
+.lamp--mini .lamp__label { display: none; }
+
+/* --- שלולית אור על הבמה, מתחת לספר --- */
+.stage::before {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: radial-gradient(62% 56% at 50% 44%,
+    rgba(255,226,172,.11), transparent 72%);
+  opacity: var(--lamp);
+  transition: opacity .45s ease;
+}
+
 /* ---------- 12. נייד ונגישות ---------- */
 
 @media (max-width: 720px) {
+  /* המנורה עוברת למרכז, ולכן גם מקור האור */
+  :root { --lamp-x: 50%; --lamp-y: 6%; }
+
   .masthead { flex-direction: column; text-align: center; }
   .masthead__tools { justify-content: center; }
 
-  .toolbar { gap: .4rem; padding: .45rem .5rem; }
+  /* הסרגל תפס כרבע מגובה המסך — הלחצנים היו גדולים מדי */
+  .toolbar { gap: .28rem; padding: .4rem .45rem; }
   .toolbar__title { display: none; }
+  .toolbar__group { gap: .28rem; }
   .toolbar__group--center { order: 3; flex-basis: 100%; }
   .toolbar__group--end { flex: 1 1 auto; }
+  .btn--icon { min-width: 2em; padding: .34em; font-size: .9rem; }
+  .btn--wood { padding: .42em .7em; font-size: .8rem; }
+  .pagebox { font-size: .78rem; padding: .24em .5em; }
+  .pagebox__input { inline-size: 2.8em; }
 
   /* בנייד מסתירים כלים שאין להם משמעות במסך קטן */
   .btn[data-act="print"], .btn[data-act="fullscreen"] { display: none; }
 
   .notepad { inset-block-start: 0; inline-size: 100%; }
   .shelf__books { min-height: 200px; }
+
+  /* --- חלונית האודות --- */
+  .tome { padding: .3rem; }
+  .tome__page {
+    padding: 1.5rem 1.15rem 2.2rem;
+    max-block-size: 80vh;
+  }
+  .tome__title { font-size: 1.5rem; }
+  .tome__flourish { margin-block-end: 1rem; }
+  /* justify יוצר "נהרות" רווחים מכוערים בעברית במסך צר */
+  .tome__text { text-align: start; font-size: .95rem; }
+  .tome__text p:first-child { font-size: 1.05em; }
+  /* הכפתור היה תלוי מחוץ למסגרת ונגע בקצה המסך */
+  .tome__close {
+    inset-block-start: 8px; inset-inline-end: 8px;
+    inline-size: 30px; block-size: 30px;
+  }
 }
 
 @media (max-width: 420px) {

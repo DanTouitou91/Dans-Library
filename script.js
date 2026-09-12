@@ -148,9 +148,6 @@ function toast(message, actionLabel, onAction, timeout = 7000) {
   setTimeout(() => box.remove(), timeout);
 }
 
-/** ממיר מספר לספרות עבריות (לשימוש עדין במספור עמודים). */
-function pageLabel(n) { return String(n); }
-
 /* ============================================================================
  * §2 — Store: שמירה מקומית
  * ----------------------------------------------------------------------------
@@ -302,8 +299,11 @@ const Store = (() => {
 const Theme = {
   init() {
     const saved = Store.settings().theme;
-    this.apply(saved === 'light' || saved === 'dark' ? saved : this.systemPref());
-    $('#btn-theme')?.addEventListener('click', () => this.toggle());
+    // ללא אנימציה באתחול — המנורה פשוט כבר במצב שבו היא הייתה
+    this.apply(saved === 'light' || saved === 'dark' ? saved : this.systemPref(), { animate: false });
+    for (const btn of $$('[data-lamp-toggle]')) {
+      btn.addEventListener('click', () => this.toggle());
+    }
 
     // אם המשתמש לא בחר במפורש — עוקבים אחרי מערכת ההפעלה
     matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', (e) => {
@@ -323,17 +323,35 @@ const Theme = {
     return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   },
 
-  apply(mode) {
-    document.documentElement.setAttribute('data-theme', mode);
+  /**
+   * המנורה היא מקור האור של הדף: דולקת = נושא בהיר, כבויה = כהה.
+   * מצב המנורה מיוצג ב-data-lamp על <html>, וה-CSS מנגן ממנו הכל —
+   * הזוהר, קון האור, חוט הלהט, ושרשרת המשיכה.
+   */
+  apply(mode, { animate = true } = {}) {
+    const root = document.documentElement;
     const dark = mode === 'dark';
-    const btn = $('#btn-theme');
-    if (btn) {
-      btn.setAttribute('aria-pressed', String(dark));
-      $('[data-theme-icon]', btn).textContent = dark ? '☀' : '☾';
-      $('[data-theme-label]', btn).textContent = dark ? 'מצב בהיר' : 'מצב כהה';
+
+    root.setAttribute('data-theme', mode);
+    root.setAttribute('data-lamp', dark ? 'off' : 'on');
+
+    // הבהוב ההדלקה וזוהר השארית בכיבוי רצים רק במעבר יזום, לא בטעינה
+    if (animate) {
+      root.setAttribute('data-lamp-anim', dark ? 'cooling' : 'warming');
+      clearTimeout(this._animTimer);
+      this._animTimer = setTimeout(() => root.removeAttribute('data-lamp-anim'), 900);
     }
+
+    for (const btn of $$('[data-lamp-toggle]')) {
+      btn.setAttribute('aria-pressed', String(!dark));   // לחוץ = דולקת
+      btn.setAttribute('aria-label', dark ? 'הדלקת מנורת הספרייה' : 'כיבוי מנורת הספרייה');
+      btn.title = dark ? 'הדלקת המנורה' : 'כיבוי המנורה';
+      const label = $('[data-lamp-label]', btn);
+      if (label) label.textContent = dark ? 'הדלק אור' : 'כבה אור';
+    }
+
     document.querySelector('meta[name="theme-color"]')
-      ?.setAttribute('content', dark ? '#17100A' : '#4A2418');
+      ?.setAttribute('content', dark ? '#120C08' : '#4A2418');
   },
 
   toggle() {
@@ -623,8 +641,21 @@ function renderPageToCanvas(doc, pageNum, canvas, boxW, boxH) {
     // שני גדלים שונים: מאגר הפיקסלים מול תיבת התצוגה ב-CSS
     canvas.width  = Math.max(1, Math.floor(viewport.width));
     canvas.height = Math.max(1, Math.floor(viewport.height));
-    canvas.style.width  = `${Math.floor(viewport.width  / dpr)}px`;
-    canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
+
+    /* תיבת התצוגה: כשיחס העמוד תואם את יחס העלה (המקרה הרגיל — תיבת העלה
+     * נגזרת מאותה מדידה), הקנבס ממלא את העלה מקצה לקצה. אחרת נשארו סרגלים
+     * בצדדים, והם שיצרו רווח נראה לעין בשדרה בין שני עמודי הכפולה.
+     * עמוד בגודל חריג עדיין מקבל התאמה פנימית כדי לא להימתח. */
+    const boxAspect  = boxW / boxH;
+    const pageAspect = base.width / base.height;
+    const fits = Math.abs(pageAspect - boxAspect) / boxAspect < 0.015;
+    if (fits) {
+      canvas.style.width  = '100%';
+      canvas.style.height = '100%';
+    } else {
+      canvas.style.width  = `${Math.floor(viewport.width  / dpr)}px`;
+      canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
+    }
 
     const ctx = canvas.getContext('2d', { alpha: false });
     ctx.fillStyle = '#F4E8D0';
@@ -919,8 +950,8 @@ const PageFlipCtor = window.St?.PageFlip || window.PageFlip || null;
 function buildLeafPlan(numPages) {
   const plan = [];
   // StPageFlip מזווג עלים (0,1), (2,3)... כשהאינדקס הזוגי משמאל והאי-זוגי מימין.
-  // עמוד 1 הוא הכריכה הקדמית של ספר עברי ולכן חייב לשבת מימין — כלומר
-  // באינדקס אי-זוגי. העלה הריק שלפניו הוא בטנת הכריכה, בדיוק כמו בספר אמיתי.
+  // עמוד 1 הוא הכריכה הקדמית של ספר עברי ולכן חייב לשבת מימין —
+  // כלומר באינדקס אי-זוגי (וכך אכן יוצא מהחישוב שלמטה). העלה הריק שלפניו הוא בטנת הכריכה, בדיוק כמו בספר אמיתי.
   if (numPages % 2 === 0) plan.push(null);          // איזון זוגיות
   for (let p = numPages; p >= 2; p--) plan.push(p); // שאר העמודים בסדר הפוך
   plan.push(null);                                  // בטנת הכריכה (שמאל)
@@ -1230,10 +1261,6 @@ function buildLeafElement({ page, aspect, index }) {
     canvas.className = 'leaf-canvas';
     canvas.setAttribute('aria-hidden', 'true');
 
-    const folio = document.createElement('span');
-    folio.className = 'leaf-folio';
-    folio.textContent = pageLabel(page);
-
     // סימניית הבד. זה <button> בכוונה: clickEventForward של StPageFlip
     // מעביר קליקים על button/a במקום להפוך את הדף.
     const ribbon = document.createElement('button');
@@ -1246,7 +1273,7 @@ function buildLeafElement({ page, aspect, index }) {
       Reader.toggleBookmark(page);
     });
 
-    inner.append(canvas, folio, ribbon);
+    inner.append(canvas, ribbon);
   }
 
   leaf.append(inner);
@@ -1280,7 +1307,6 @@ const Reader = {
       const btn = e.target.closest('[data-act]');
       if (!btn) return;
       const act = btn.dataset.act;
-      if (act === 'download') return;          // <a download> — התנהגות טבעית
       e.preventDefault();
       this.handle(act);
     });
@@ -1342,8 +1368,6 @@ const Reader = {
     $('[data-notepad-book]').textContent = book.title;
     $('#notepad-text').value = Store.notes(book.id);
     this.updateNoteCount();
-    $('[data-act="download"]').href = book.file;
-    $('[data-act="download"]').setAttribute('download', '');
 
     $('#fault').hidden = true;
     $('#loader').hidden = false;
