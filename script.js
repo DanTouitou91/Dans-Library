@@ -1676,6 +1676,14 @@ class FlipReader {
 
   goTo(page, { animate = true } = {}) {
     const idx = this.idxOf(clamp(page, 1, this.source.numPages));
+    // ⚠️ במסך צר flip() אינו מזיז את הספרייה כלל — האינדקס הפנימי נשאר
+    // תקוע על מקומו, והעמוד לא מתחלף. נמדד: מעמוד 5 בספר בן 111 עמודים
+    // נכשלו קפיצות ל-6, 12, 30 ו-31, בעוד turnToPage הצליח בכולן.
+    // זה אותו נתיב שבור שבגללו advance/retreat כבר עוברים דרך
+    // _stepByIndex; goTo פשוט לא קיבל את אותו טיפול, ולכן **כל** קפיצה
+    // בנייד הייתה שבורה: תוכן עניינים, תיבת מספר העמוד, תוצאות חיפוש
+    // וסימניות כאחד.
+    if (this.isPortrait()) animate = false;
     try {
       if (animate) this.pageFlip.flip(idx);
       else this.pageFlip.turnToPage(idx);
@@ -2341,6 +2349,7 @@ const Reader = {
   toggleFind(force) {
     const el = $('#finder');
     const show = force != null ? force : el.hidden;
+    if (show) this.toggleNotes(false);
     el.hidden = !show;
     $('[data-act="find"]').setAttribute('aria-expanded', String(show));
     if (show) {
@@ -2481,6 +2490,8 @@ const Reader = {
   toggleNotes(force) {
     const pad = $('#notepad');
     const show = force != null ? force : pad.hidden;
+    // שני הפאנלים יחד מכסים כמעט את כל המסך בנייד ולא נשאר מה לקרוא
+    if (show) this.toggleFind(false);
     pad.hidden = !show;
     $('[data-act="notes"]').setAttribute('aria-expanded', String(show));
     if (show) $('#notepad-text').focus();
@@ -2905,6 +2916,24 @@ function init() {
   // היו משאירים אותה תלויה באוויר מול השדרה הלא נכונה
   addEventListener('scroll', () => Shelf.hideTip(), { passive: true, capture: true });
   addEventListener('hashchange', () => Shelf.hideTip());
+
+  // ⚠️ --toolbar-h הוא קבוע (clamp(56px,8vh,68px)), אבל בנייד הסרגל
+  // נשבר לשתי שורות ותופס 85px בפועל. הפאנלים נפתחו מתחת לערך הקבוע,
+  // ולכן ראשם — הכותרת ותיבת החיפוש — נחבא מאחורי הסרגל.
+  //
+  // ⚠️ הגובה הנמדד נכתב למשתנה **נפרד**. כתיבה חזרה ל---toolbar-h
+  // הייתה יוצרת מנגנון גִּרְעוֹן: ל-.toolbar יש min-block-size שמסתמך
+  // עליו, כך שגובה שנמדד פעם אחת היה הופך לרצפה קבועה — ובסיבוב
+  // המכשיר הסרגל לא היה מצליח להתכווץ בחזרה.
+  const bar = $('.toolbar');
+  if (bar && 'ResizeObserver' in window) {
+    const syncBar = () => {
+      const h = Math.round(bar.getBoundingClientRect().height);
+      if (h > 0) document.documentElement.style.setProperty('--toolbar-real-h', `${h}px`);
+    };
+    new ResizeObserver(syncBar).observe(bar);
+    syncBar();
+  }
 
   // סגירת שכבות בלחיצה על הרקע / כפתורי סגירה
   document.addEventListener('click', (e) => {

@@ -771,6 +771,11 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 .view--reader {
   position: fixed; inset: 0; z-index: 40;
+  /* ⚠️ 100dvh ולא רק inset:0. בנייד, אלמנט position:fixed נמדד מול
+     החלון ה"גדול" — זה שכולל את השטח שמתחת לשורת הכתובת — ולכן
+     תחתית התוכן נחתכת מאחורי כרום הדפדפן ואי אפשר לגלול אליה.
+     dvh עוקב אחרי החלון בפועל. בדסקטופ הוא שווה ל-vh, ואין שינוי. */
+  block-size: 100dvh;
   display: flex; flex-direction: column;
   background-color: var(--wood-dark);
   background-image:
@@ -1107,7 +1112,7 @@ html::-webkit-scrollbar-corner,
 
 .notepad {
   position: absolute;
-  inset-block: var(--toolbar-h) 0;
+  inset-block: var(--toolbar-real-h, var(--toolbar-h)) 0;
   inset-inline-end: 0;
   z-index: 8;
   inline-size: min(390px, 88vw);
@@ -1502,13 +1507,16 @@ html::-webkit-scrollbar-corner,
    נופל ימינה אל תוך התוכן. ראו את ההערה ב-.notepad. */
 .finder {
   position: absolute;
-  inset-block: var(--toolbar-h) 0;
+  inset-block: var(--toolbar-real-h, var(--toolbar-h)) 0;
   inset-inline-end: 0;
   z-index: 9;
   inline-size: min(420px, 92vw);
   display: flex; flex-direction: column;
   overflow-y: auto; overscroll-behavior: contain;
-  padding: 1rem clamp(.9rem, 2vw, 1.3rem) 1rem;
+  padding: 1rem clamp(.9rem, 2vw, 1.3rem);
+  /* הערך האחרון בתוכן העניינים נגע בקצה המסך ובמכשירים עם מחוון בית
+     נחבא מתחתיו */
+  padding-block-end: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   color: var(--ink);
   background-color: var(--paper);
   background-image:
@@ -1724,7 +1732,10 @@ html::-webkit-scrollbar-corner,
   /* בנייד מסתירים כלים שאין להם משמעות במסך קטן */
   .btn[data-act="print"], .btn[data-act="fullscreen"] { display: none; }
 
-  .notepad { inset-block-start: 0; inline-size: 100%; }
+  /* ⚠️ הפנקס כיסה גם את הסרגל (inset-block-start: 0), ולכן בנייד לא
+     היה אפשר לעבור ממנו לחיפוש בלי לסגור אותו קודם. עכשיו הוא נפתח
+     מתחת לסרגל בדיוק כמו פאנל החיפוש. */
+  .notepad { inline-size: 100%; }
   .shelf__books { min-height: 230px; }
 
   /* --- חלונית האודות --- */
