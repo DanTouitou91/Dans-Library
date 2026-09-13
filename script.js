@@ -43,6 +43,10 @@
  *                      color  — צבע בד הכריכה.
  *                      height — גובה יחסי (0.8–1.05) כדי שהמדף ייראה טבעי.
  *    note      (רשות)  שורת מידע קצרה שמופיעה בתחתית הכרטיסייה.
+ *    rev       (רשות)  מספר גרסה. מצורף לכתובת הקובץ כ-?v=…, ולכן שינוי
+ *                      שלו מאלץ כל דפדפן להוריד את הקובץ מחדש. השתמשו בזה
+ *                      אם החלפתם קובץ והוא נראה "תקוע" על גרסה ישנה, או
+ *                      אם ספר נשאר שבור אצל משתמש אחרי שהקובץ כבר עלה.
  *
  *  דוגמה מלאה:
  *
@@ -87,6 +91,9 @@ const CATALOG = [
     id: 'mavo-minhal-nihul-tziburi',
     title: 'מבוא למינהל ולניהול ציבורי',
     file: 'books/mavo-minhal-nihul-tziburi.pdf',
+    // הספר הופיע בקטלוג לפני שהקובץ עלה, ודפדפנים שמרו את תשובת ה-404
+    // ליממה. השדה הזה יוצר כתובת חדשה ובכך עוקף כל עותק תקוע כזה.
+    rev: 2,
     // המקורות נלקחו מתוך "הבהרה חשובה" שבספר עצמו. ⚠️ הספר הזה שונה
     // משני האחרים: הוא *לא* נכתב על בסיס חומרי הקורס הרשמיים, ולכן
     // אסור לרשום כאן "ספר הקורס" — זה יהיה פשוט לא נכון.
@@ -737,11 +744,20 @@ class BookSource {
     this._running = false;
   }
 
+  /**
+   * הכתובת שממנה מורידים את הספר.
+   * ⚠️ שדה rev מצורף כ-?v=… ובכך יוצר כתובת חדשה. זה הכלי היחיד שעוקף
+   * תשובה שנשמרה במטמון של המשתמש — אין לשרת שום דרך לבטל מטמון קיים.
+   */
+  static urlFor(book) {
+    return book.rev ? `${book.file}?v=${encodeURIComponent(book.rev)}` : book.file;
+  }
+
   static async open(book, onProgress) {
     const PDFJS = await whenPdfjsReady();
 
     const task = PDFJS.getDocument({
-      url: book.file,
+      url: BookSource.urlFor(book),
       standardFontDataUrl: 'vendor/pdfjs/standard_fonts/',
 
       /* ⚠️ אל תסירו את השורה הזו.
@@ -789,23 +805,47 @@ class BookSource {
    * מחזיר מחרוזת קצרה שמוצגת למשתמש ונרשמת ביומן.
    */
   static async diagnose(url) {
-    try {
-      const res = await fetch(url, { headers: { Range: 'bytes=0-7' } });
-      if (res.status === 404) return 'הקובץ לא נמצא בשרת (404).';
-      if (!res.ok && res.status !== 206) return `השרת השיב בשגיאה ${res.status}.`;
-      const type = (res.headers.get('content-type') || '').toLowerCase();
-      const head = new Uint8Array(await res.arrayBuffer());
-      const magic = String.fromCharCode(...head.slice(0, 5));
-      if (magic !== '%PDF-') {
-        return type.includes('html')
-          ? 'השרת החזיר דף HTML במקום את הקובץ.'
-          : `מה שהתקבל אינו קובץ PDF (${type || 'ללא סוג'}).`;
-      }
-      return 'הקובץ תקין בשרת — ההורדה כנראה נקטעה באמצע.';
-    } catch {
-      return 'לא הצלחנו להגיע לשרת כלל — בדוק את החיבור לרשת.';
+    // ⚠️ חייבים לשאול בדיוק כמו ש-PDF.js שואל. הגרסה הקודמת שלחה כותרת
+    // Range, ודפדפן עשוי לשרת אותה מהרשת בזמן שבקשה רגילה מוגשת מעותק
+    // ישן שבמטמון — כך יצא אבחון שאמר "הקובץ תקין בשרת" בזמן שהטעינה
+    // עצמה קיבלה משהו אחר לגמרי. זה בדיוק מה שהטעה אותנו פעם אחת.
+    const read = async (init) => {
+      const res = await fetch(url, init);
+      const buf = await res.arrayBuffer();
+      const head = new Uint8Array(buf.slice(0, 5));
+      return {
+        status: res.status,
+        type: (res.headers.get('content-type') || '').toLowerCase(),
+        magic: String.fromCharCode(...head),
+        bytes: buf.byteLength,
+      };
+    };
+
+    let cached;
+    try { cached = await read(undefined); }
+    catch { return 'לא הצלחנו להגיע לשרת כלל — בדוק את החיבור לרשת.'; }
+
+    if (cached.magic === '%PDF-') {
+      return 'הקובץ תקין ונגיש, והכשל אינו בהורדה עצמה.';
     }
+
+    // מה שהתקבל אינו PDF. שואלים שוב תוך עקיפת המטמון, כדי להבחין בין
+    // תקלה אמיתית בשרת לבין תשובה ישנה ששמורה אצל המשתמש.
+    let fresh = null;
+    try { fresh = await read({ cache: 'reload' }); } catch { /* נטפל למטה */ }
+
+    if (fresh && fresh.magic === '%PDF-') {
+      return 'הדפדפן שמר אצלך תשובת שגיאה ישנה לכתובת הזו. ' +
+             'בשרת הקובץ תקין — רענון מלא (ניקוי מטמון) יפתור.';
+    }
+    const r = fresh || cached;
+    if (r.status === 404) return 'הקובץ לא נמצא בשרת (404).';
+    if (r.status >= 400) return `השרת השיב בשגיאה ${r.status}.`;
+    return r.type.includes('html')
+      ? 'השרת החזיר דף HTML במקום את הקובץ.'
+      : `מה שהתקבל אינו קובץ PDF (${r.type || 'ללא סוג'}).`;
   }
+
 
   /**
    * דוגם כשבעה עמודים כדי לקבוע את יחס הגובה-רוחב של תיבת העלה.
@@ -1642,21 +1682,28 @@ const Reader = {
 
   showFault(err) {
     $('#loader').hidden = true;
-    const missing = err?.name === 'MissingPDFException' || err?.code === 'pdfjs-missing';
+    // ⚠️ pdfjs-missing אינו "הספר לא נמצא": הוא אומר שספריית PDF.js עצמה
+    // לא נטענה תוך 15 שניות. קודם הוא הוצג כספר חסר, והמשתמש קיבל הוראה
+    // חסרת טעם להעלות את הקובץ ולדחוף מחדש.
+    const libDown = err?.code === 'pdfjs-missing';
+    const missing = err?.name === 'MissingPDFException';
     $('[data-fault-title]').textContent = missing
       ? 'הספר לא נמצא על המדף'
+      : libDown ? 'רכיב הקריאה לא נטען'
       : 'לא הצלחנו לפתוח את הספר';
     $('[data-fault-text]').innerHTML = missing
       ? `הקובץ <code>${escapeHtml(this.book?.file || '')}</code> לא קיים. ` +
         'העלה אותו לתיקייה <code>books/</code> ובצע push מחדש.'
-      : 'לא הצלחנו לקרוא את הקובץ. בודקים מה קרה…';
+      : libDown
+        ? 'רכיב קריאת ה-PDF לא הסתיים להיטען. בדוק את החיבור לרשת ורענן את הדף.'
+        : 'לא הצלחנו לקרוא את הקובץ. בודקים מה קרה…';
     $('#fault').hidden = false;
     console.warn('[reader] open failed', err);
 
     // מבררים את הסיבה האמיתית ומעדכנים את ההודעה. בלי זה כל תקלה
     // שאינה 404 קיבלה את אותו משפט כללי, ואי אפשר היה לדעת ממנו כלום.
-    if (!missing && this.book?.file) {
-      BookSource.diagnose(this.book.file).then((why) => {
+    if (!missing && !libDown && this.book?.file) {
+      BookSource.diagnose(BookSource.urlFor(this.book)).then((why) => {
         if ($('#fault').hidden) return;   // הספר נפתח בינתיים
         $('[data-fault-text]').textContent = `${why} אפשר לנסות לרענן את הדף.`;
         console.warn('[reader] אבחון:', why);
