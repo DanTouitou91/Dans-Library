@@ -95,6 +95,7 @@
          ⚠️ SVG ולא תווי טקסט בכוונה: תווי חצים מסוג סוגריים נושאים
          Bidi_Mirrored, והדפדפן מצייר אותם הפוך בהקשר RTL. ל-path אין
          שום התנהגות דו-כיוונית — הצורה נקבעת כאן ונשארת. -->
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m15.5 15.5 3.5 3.5"/></symbol>
     <symbol id="i-prev" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></symbol>
     <!-- ⚠️ "הבא" מצביע שמאלה כי הלחצן שמקדם יושב בצד שמאל. -->
     <symbol id="i-next" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></symbol>
@@ -242,6 +243,8 @@
     </div>
 
     <div class="toolbar__group toolbar__group--end">
+      <button type="button" class="btn btn--brass btn--icon" data-act="find" title="חיפוש וסימניות (ח)"
+              aria-expanded="false" aria-label="חיפוש וסימניות"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-search"/></svg></button>
       <button type="button" class="btn btn--brass btn--icon" data-act="bookmark" title="סימניה (ב)" aria-pressed="false" aria-label="סימניה">
         <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bookmark"/></svg>
       </button>
@@ -310,6 +313,36 @@
       <span class="notepad__status" data-notepad-status>נשמר אוטומטית</span>
       <span class="notepad__count" data-notepad-count></span>
     </footer>
+  </aside>
+
+  <!-- חיפוש וסימניות. פאנל אחד: תיבת החיפוש תמיד למעלה, ומתחתיה
+       התוצאות — או רשימת הסימניות כשאין חיפוש פעיל. -->
+  <aside class="finder" id="finder" hidden aria-labelledby="finder-title">
+    <header class="notepad__head">
+      <h3 class="notepad__title" id="finder-title">
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-search"/></svg> חיפוש וסימניות
+      </h3>
+      <button type="button" class="notepad__close" data-act="find-close" aria-label="סגירה"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
+    </header>
+
+    <form class="finder__form" data-act="find-form" role="search">
+      <label class="sr-only" for="find-input">חיפוש בתוך הספר</label>
+      <input type="search" id="find-input" class="finder__input" autocomplete="off"
+             placeholder="חיפוש מילה או ביטוי בתוך הספר…">
+    </form>
+
+    <p class="finder__status" data-find-status role="status"></p>
+    <ol class="finder__list" data-find-results hidden></ol>
+
+    <section class="finder__marks" data-find-marks>
+      <h4 class="finder__subtitle">
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bookmark"/></svg> הסימניות שלי
+      </h4>
+      <ol class="finder__list" data-marks-list></ol>
+      <p class="finder__empty" data-marks-empty hidden>
+        עוד אין סימניות בספר הזה. סמנו עמוד בלחצן הסימנייה שבסרגל, או במקש <kbd>ב</kbd>.
+      </p>
+    </section>
   </aside>
 </div>
 

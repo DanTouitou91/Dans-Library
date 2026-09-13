@@ -1322,6 +1322,104 @@ ul { margin: 0; padding: 0; list-style: none; }
 .fault__mark .icon { inline-size: 2.4rem; block-size: 2.4rem; stroke-width: 1.2; }
 .notepad__title .icon { display: inline-block; vertical-align: -.15em; }
 
+/* ---------- חיפוש וסימניות ---------- */
+/* ⚠️ אותו עיגון של הפנקס: inset-inline-end הוא שמאל ב-RTL, ולכן הצל
+   נופל ימינה אל תוך התוכן. ראו את ההערה ב-.notepad. */
+.finder {
+  position: absolute;
+  inset-block: var(--toolbar-h) 0;
+  inset-inline-end: 0;
+  z-index: 9;
+  inline-size: min(420px, 92vw);
+  display: flex; flex-direction: column;
+  padding: 1rem clamp(.9rem, 2vw, 1.3rem) 1rem;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse at 10% 6%, rgba(160,120,60,.18), transparent 48%),
+    radial-gradient(ellipse at 90% 94%, rgba(140,100,50,.16), transparent 45%);
+  box-shadow: 14px 0 32px rgba(0,0,0,.5), inset -3px 0 0 rgba(120,85,40,.3);
+  animation: slide-in .26s cubic-bezier(.2,.9,.3,1.05) both;
+  overflow: hidden;
+}
+
+.finder__form { margin-block: .75rem .5rem; }
+.finder__input {
+  inline-size: 100%;
+  padding: .6rem .8rem;
+  font: inherit; font-size: .95rem;
+  color: var(--ink);
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(120,85,40,.35);
+  border-radius: 6px;
+}
+.finder__input:focus-visible {
+  outline: 2px solid var(--brass); outline-offset: 1px;
+}
+
+.finder__status {
+  font-family: var(--font-ui);
+  font-size: .75rem; color: var(--ink-soft);
+  min-block-size: 1.1em; margin-block-end: .4rem;
+}
+
+.finder__subtitle {
+  font-size: .85rem; color: var(--burgundy);
+  margin-block: .6rem .4rem;
+  padding-block-end: .3rem;
+  border-block-end: 1px solid rgba(110,29,43,.22);
+}
+.finder__subtitle .icon { display: inline-block; vertical-align: -.15em; }
+
+.finder__list {
+  list-style: none; margin: 0; padding: 0;
+  overflow-y: auto; flex: 1 1 auto; min-block-size: 0;
+}
+/* בלי זה הרשימה הריקה עדיין תופסת את כל הגובה, והודעת "אין סימניות"
+   נדחפת לתחתית הפאנל במקום לשבת מתחת לכותרת. */
+.finder__list:empty { display: none; }
+.finder__hit { display: flex; align-items: stretch; gap: .3rem; }
+.finder__hitbtn {
+  flex: 1 1 auto;
+  display: grid; grid-template-columns: auto 1fr; gap: .5rem; align-items: baseline;
+  inline-size: 100%; text-align: start;
+  padding: .5rem .4rem;
+  border: none; border-block-end: 1px solid rgba(120,85,40,.16);
+  background: none; cursor: pointer; color: inherit; font: inherit;
+}
+.finder__hitbtn:hover, .finder__hitbtn:focus-visible { background: rgba(120,85,40,.1); }
+.finder__page {
+  font-family: var(--font-ui); font-size: .7rem;
+  color: var(--burgundy); white-space: nowrap;
+}
+.finder__snip {
+  font-size: .82rem; color: var(--ink-soft); line-height: 1.5;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.finder__snip mark {
+  background: rgba(214,168,74,.45); color: var(--ink);
+  border-radius: 2px; padding: 0 .1em;
+}
+.finder__del {
+  flex: 0 0 auto; align-self: center;
+  inline-size: 26px; block-size: 26px;
+  border: none; border-radius: 50%;
+  cursor: pointer; font-size: 1rem; line-height: 1;
+  color: var(--ink); background: rgba(120,85,40,.14);
+}
+.finder__del:hover { background: rgba(110,29,43,.28); }
+
+.finder__marks { display: flex; flex-direction: column; min-block-size: 0; flex: 1 1 auto; }
+.finder__empty {
+  font-size: .82rem; color: var(--ink-soft); line-height: 1.6;
+  padding: .6rem .2rem;
+}
+.finder__empty kbd {
+  font-family: var(--font-ui); font-size: .75rem;
+  padding: .05em .35em; border-radius: 3px;
+  background: rgba(120,85,40,.18);
+}
+
 /* ---------- חצי דפדוף על הספר ---------- */
 
 .page-nav {

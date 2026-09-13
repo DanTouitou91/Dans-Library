@@ -801,6 +801,37 @@ class BookSource {
   }
 
   /**
+   * מחלץ את הטקסט של הספר לצורך חיפוש, עמוד אחר עמוד.
+   * ⚠️ החילוץ עצל ונשמר בזיכרון בלבד — לא ב-localStorage. ספר בן 111
+   * עמודים הוא כמה מאות אלפי תווים, וזה יגדוש את המכסה של הדפדפן
+   * ויסכן את ההערות והסימניות, שהן הדבר היקר באמת.
+   */
+  async buildTextIndex(onProgress) {
+    if (this._index) return this._index;
+    if (this._indexing) return this._indexing;
+
+    this._indexing = (async () => {
+      const pages = [];
+      for (let p = 1; p <= this.numPages; p++) {
+        try {
+          const page = await this.doc.getPage(p);
+          const tc = await page.getTextContent();
+          // ריווח: פריטי הטקסט אינם כוללים רווחים בין מקטעים
+          pages.push(tc.items.map((i) => i.str).join(' ').replace(/\s+/g, ' '));
+          page.cleanup();
+        } catch {
+          pages.push('');           // עמוד פגום לא יפיל את החיפוש
+        }
+        onProgress?.(p, this.numPages);
+      }
+      this._index = pages;
+      this._indexing = null;
+      return pages;
+    })();
+    return this._indexing;
+  }
+
+  /**
    * מברר *מדוע* הפתיחה נכשלה, במקום לנחש.
    * מחזיר מחרוזת קצרה שמוצגת למשתמש ונרשמת ביומן.
    */
@@ -1636,6 +1667,22 @@ const Reader = {
   init() {
     const bar = $('#reader-view');
 
+    // תוצאות חיפוש וסימניות — האזנה אחת במקום מאזין לכל שורה
+    $('#finder').addEventListener('click', (e) => {
+      const go = e.target.closest('[data-goto]');
+      if (go) { this.goTo(Number(go.dataset.goto)); return; }
+      const un = e.target.closest('[data-unmark]');
+      if (un) { this.toggleBookmark(Number(un.dataset.unmark)); this.renderMarksList(); }
+    });
+
+    // חיפוש חי, עם השהיה קצרה כדי לא לסרוק על כל הקשה
+    const findInput = $('#find-input');
+    const runFind = debounce(() => this.runSearch(findInput.value), 260);
+    findInput.addEventListener('input', runFind);
+    $('[data-act="find-form"]').addEventListener('submit', (e) => {
+      e.preventDefault(); this.runSearch(findInput.value);
+    });
+
     bar.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-act]');
       if (!btn) return;
@@ -1840,6 +1887,8 @@ const Reader = {
       case 'next':        this.view?.advance(); break;
       case 'prev':        this.view?.retreat(); break;
       case 'bookmark':    this.toggleBookmark(this.currentPage()); break;
+      case 'find':        this.toggleFind(); break;
+      case 'find-close':  this.toggleFind(false); break;
       case 'notes':       this.toggleNotes(); break;
       case 'notes-close': this.toggleNotes(false); break;
       case 'zoom-in':     this.setZoom(this.zoom + 0.15); break;
@@ -1854,6 +1903,7 @@ const Reader = {
     else this.marks.add(page);
 
     const on = this.marks.has(page);
+    if (!$('#finder').hidden) this.renderMarksList();
     this.view?.setBookmark(page, on);
     if (page === this.currentPage()) {
       $('[data-act="bookmark"]').setAttribute('aria-pressed', String(on));
@@ -1864,6 +1914,139 @@ const Reader = {
 
   applyBookmarksToView() {
     for (const page of this.marks) this.view?.setBookmark(page, true);
+  },
+
+  /* ---------- חיפוש וסימניות ---------- */
+
+  toggleFind(force) {
+    const el = $('#finder');
+    const show = force != null ? force : el.hidden;
+    el.hidden = !show;
+    $('[data-act="find"]').setAttribute('aria-expanded', String(show));
+    if (show) {
+      this.renderMarksList();
+      $('#find-input').focus();
+      $('#find-input').select();
+    }
+  },
+
+  /** משווה טקסט לחיפוש: בלי ניקוד, בלי הבדלי רישיות, ורווחים מנורמלים. */
+  _normalize(t) {
+    return (t || '')
+      .replace(/[\u0591-\u05C7]/g, '')   // טעמים וניקוד
+      .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '')  // תווי כיווניות
+      .replace(/\s+/g, ' ')
+      .toLowerCase();
+  },
+
+  async runSearch(query) {
+    const q = this._normalize(query).trim();
+    const list = $('[data-find-results]');
+    const marks = $('[data-find-marks]');
+    const status = $('[data-find-status]');
+
+    if (q.length < 2) {                 // שאילתה קצרה מדי תחזיר הכול
+      list.hidden = true; list.replaceChildren();
+      marks.hidden = false;
+      status.textContent = q ? 'הקלידו שתי אותיות לפחות.' : '';
+      return;
+    }
+
+    marks.hidden = true;
+    status.textContent = 'סורק את הספר…';
+    const token = Symbol('search');
+    this._searchToken = token;
+
+    const pages = await this.source.buildTextIndex((done, total) => {
+      if (this._searchToken === token && done % 10 === 0) {
+        status.textContent = `סורק את הספר… ${done}/${total}`;
+      }
+    });
+    if (this._searchToken !== token) return;   // המשתמש הקליד משהו חדש
+
+    const hits = [];
+    pages.forEach((text, i) => {
+      const hay = this._normalize(text);
+      let from = 0;
+      while (hits.length < 200) {
+        const at = hay.indexOf(q, from);
+        if (at === -1) break;
+        hits.push({ page: i + 1, at, text: hay });
+        from = at + q.length;
+      }
+    });
+
+    list.replaceChildren();
+    if (!hits.length) {
+      status.textContent = `לא נמצאו תוצאות עבור "${query.trim()}".`;
+      list.hidden = true;
+      return;
+    }
+    const byPage = new Set(hits.map((h) => h.page));
+    status.textContent = `${hits.length} תוצאות ב-${byPage.size} עמודים.`;
+
+    for (const h of hits.slice(0, 120)) {
+      const li = document.createElement('li');
+      li.className = 'finder__hit';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'finder__hitbtn';
+      btn.dataset.goto = String(h.page);
+
+      const num = document.createElement('span');
+      num.className = 'finder__page';
+      num.textContent = `עמ׳ ${h.page}`;
+
+      const snip = document.createElement('span');
+      snip.className = 'finder__snip';
+      const before = h.text.slice(Math.max(0, h.at - 40), h.at);
+      const match = h.text.slice(h.at, h.at + q.length);
+      const after = h.text.slice(h.at + q.length, h.at + q.length + 40);
+      snip.append(document.createTextNode(before ? '…' + before : ''));
+      const mark = document.createElement('mark');
+      mark.textContent = match;
+      snip.append(mark, document.createTextNode(after + '…'));
+
+      btn.append(num, snip);
+      li.append(btn);
+      list.append(li);
+    }
+    list.hidden = false;
+  },
+
+  renderMarksList() {
+    const list = $('[data-marks-list]');
+    const empty = $('[data-marks-empty]');
+    const pages = [...this.marks].sort((a, b) => a - b);
+    list.replaceChildren();
+    empty.hidden = pages.length > 0;
+    for (const p of pages) {
+      const li = document.createElement('li');
+      li.className = 'finder__hit';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'finder__hitbtn';
+      btn.dataset.goto = String(p);
+      const num = document.createElement('span');
+      num.className = 'finder__page';
+      num.textContent = `עמ׳ ${p}`;
+      const snip = document.createElement('span');
+      snip.className = 'finder__snip';
+      snip.textContent = this.source?._index?.[p - 1]
+        ? this.source._index[p - 1].slice(0, 70) + '…'
+        : 'מעבר לעמוד';
+      btn.append(num, snip);
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'finder__del';
+      del.dataset.unmark = String(p);
+      del.setAttribute('aria-label', `הסרת הסימנייה מעמוד ${p}`);
+      del.textContent = '×';
+
+      li.append(btn, del);
+      list.append(li);
+    }
   },
 
   toggleNotes(force) {
@@ -1939,6 +2122,8 @@ const Reader = {
     this.source = null;
     this.book = null;
     $('#notepad').hidden = true;
+    $('#finder').hidden = true;
+    $('#find-input').value = '';
     $('#reader-view').hidden = true;
     $('#shelf-view').hidden = false;
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
@@ -2045,6 +2230,7 @@ function initKeyboard() {
       if (typing && t.matches('textarea')) { t.blur(); return; }
       if (typing && t.matches('input')) { t.blur(); return; }
       if (Layers.topEl) { e.preventDefault(); Layers.closeTop(); Router.back('#/'); return; }
+      if (!$('#finder').hidden) { e.preventDefault(); Reader.toggleFind(false); return; }
       if (!$('#notepad').hidden) { e.preventDefault(); Reader.toggleNotes(false); return; }
       if (Router.current.name === 'reader') {
         e.preventDefault();
@@ -2076,6 +2262,8 @@ function initKeyboard() {
         e.preventDefault(); Reader.toggleBookmark(Reader.currentPage()); break;
       case 'n': case 'N': case 'מ':
         e.preventDefault(); Reader.toggleNotes(); break;
+      case 'f': case 'F': case 'ח':      // גם פריסת מקלדת עברית
+        e.preventDefault(); Reader.toggleFind(); break;
     }
   });
 }
