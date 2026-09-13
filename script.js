@@ -1068,6 +1068,34 @@ class ScrollReader {
 
 const PageFlipCtor = window.St?.PageFlip || window.PageFlip || null;
 
+/* ============================================================================
+ *  כיוון הקריאה — נקודת האמת היחידה
+ * ----------------------------------------------------------------------------
+ *  ⚠️ כל באגי ה-RTL בקורא נבעו מכך שכיוון הדפדוף היה מפוזר בין כמה
+ *  מקומות. כאן הוא מוגדר פעם אחת, וכל השאר נגזר ממנו.
+ *
+ *  שתי עובדות על StPageFlip, שנקראו מקוד הספרייה ולא שוערו:
+ *    · flipNext מרים את הדף ה*ימני* ומעיף אותו שמאלה  ⇐ תנועה ימין→שמאל
+ *    · flipPrev מרים את הדף ה*שמאלי* ומעיף אותו ימינה ⇐ תנועה שמאל→ימין
+ *
+ *  בספר עברי הכריכה בימין, ולכן "קדימה" הוא flipNext: מרימים את הדף
+ *  הימני ומעיפים שמאלה, והעמוד הבא נחשף מתחתיו מימין.
+ *
+ *  להיפוך מלא של הכיוון יש לשנות כאן בלבד — גם הניווט וגם סדר העמודים
+ *  בתוך הכפולה נגזרים מהערך הזה.
+ * ========================================================================== */
+const READING = {
+  rtl: true,          // העמוד הנמוך יושב מימין בכל כפולה
+  //  ✦ "קדימה" הוא flipPrev ✦
+  //  flipPrev מרים את הדף השמאלי ומעיף אותו ימינה, כלומר תנועה
+  //  שמאל→ימין: הכריכה נפתחת לכיוון ימין. זו ההגדרה שדן ביקש במפורש
+  //  ("פתיחת הספר תהיה לכיוון ימין"), ובעקבותיה גם החץ הימני הוא
+  //  שמקדם. כדי ש-flipPrev יקדם את מספרי העמודים, הכפולות נשמרות
+  //  בסדר הפוך לסדר הקריאה — ראו buildLeafPlan.
+  forward: 'flipPrev',
+  backward: 'flipNext',
+};
+
 /**
  * בונה את תוכנית העלים: מיפוי דו-כיווני בין אינדקס עלה למספר עמוד.
  * StPageFlip מזווג עלים (0,1), (2,3)... כשהאינדקס הזוגי משמאל והאי-זוגי
@@ -1075,25 +1103,26 @@ const PageFlipCtor = window.St?.PageFlip || window.PageFlip || null;
  * מוחלפים — כך שהנמוך יושב מימין, כנדרש בעברית.
  */
 function buildLeafPlan(numPages, portrait = false) {
-  // ⚠️ בתצוגת עמוד בודד (מסך צר) StPageFlip מציגה עלה אחד בכל פעם, *לפי
-  // סדר ה-DOM*. תוכנית הכפולות שמחליפה צדדים ([ריק,1] [3,2] [5,4]) נותנת
-  // שם סדר קריאה שגוי — 1, 3, 2, 5, 4 — ומעבר של צעד אחד אחורה אפילו לא
-  // מצליח להתבצע. לכן במסך צר התוכנית היא פשוט סדר העמודים הטבעי.
-  if (portrait) return Array.from({ length: numPages }, (_, i) => i + 1);
-
+  // ⚠️ "קדימה" הוא flipPrev (ראו READING), כלומר מעבר לאינדקס *נמוך* יותר.
+  // לכן הכפולות נשמרות בסדר הפוך לסדר הקריאה: הכפולה האחרונה בספר היא
+  // הראשונה במערך. בתוך כל כפולה העמוד הנמוך יושב מימין, כמו בעברית.
   if (numPages <= 1) return [null, 1];
 
+  // מסך צר: כל עלה הוא כפולה בפני עצמה, ולכן סדר יורד פשוט.
+  if (portrait) return Array.from({ length: numPages }, (_, i) => numPages - i);
+
   const plan = [];
-  plan.push(null); plan.push(1);          // הכריכה הקדמית — לבדה מימין
-
-  // עמודי הפנים בזוגות: הנמוך מימין (אינדקס אי-זוגי), הגבוה משמאל.
-  let p = 2;
-  while (p <= numPages - 1) {
-    if (p + 1 <= numPages - 1) { plan.push(p + 1); plan.push(p); p += 2; }
-    else { plan.push(null); plan.push(p); p += 1; }   // עמוד פנים יחיד שנותר
-  }
-
   plan.push(null); plan.push(numPages);   // הכריכה האחורית — לבדה מימין
+
+  // עמודי הפנים הם 2..numPages-1, בזוגות של (גבוה משמאל, נמוך מימין).
+  let top = numPages - 1;
+  if ((numPages - 2) % 2 !== 0) {         // עמוד פנים יחיד שנותר
+    plan.push(null); plan.push(top);
+    top -= 1;
+  }
+  for (let high = top; high >= 3; high -= 2) { plan.push(high); plan.push(high - 1); }
+
+  plan.push(null); plan.push(1);          // הכריכה הקדמית — לבדה מימין
   return plan;
 }
 
@@ -1330,22 +1359,27 @@ class FlipReader {
   // כלום. התוצאה: במובייל אפשר היה רק לחזור אחורה, לא להתקדם.
   // לכן במסך צר מנווטים לפי מספר עמוד, שם כל כפולה היא עמוד אחד ממילא.
   advance() {
-    // flipNext הוא "קדימה" גם בתצוגת עמוד בודד: הוא תופס את הדף הימני
-    // ומעיף אותו שמאלה — בדיוק תנועת הדפדוף של ספר עברי.
-    try { this.pageFlip.flipNext('top'); } catch (e) { this.fail(e); }
+    // ⚠️ במסך צר flipPrev לא עובד: הוא מדמה מגע ב-x=10, כלומר בחצי
+    // השמאלי, ושם אין עמוד כלל (setLeftPage(null)). לכן שם מנווטים לפי
+    // אינדקס. ראו גם retreat().
+    if (this.isPortrait()) { this._stepByIndex(+1); return; }
+    try { this.pageFlip[READING.forward]('top'); } catch (e) { this.fail(e); }
+  }
+
+  /** מעבר של עמוד אחד לפי אינדקס — המסלול היציב בתצוגת עמוד בודד. */
+  _stepByIndex(delta) {
+    const page = clamp(this.current + delta, 1, this.source.numPages);
+    const idx = this.idxOf(page);
+    try { this.pageFlip.turnToPage(idx); } catch (e) { this.fail(e); return; }
+    this._emit(page);
+    this.reconcile(idx);
   }
   retreat() {
     // ⚠️ flipPrev מדמה מגע ב-x=10, כלומר בחצי השמאלי של התיבה. בתצוגת
     // עמוד בודד אין שם עמוד (setLeftPage(null)) והקריאה לא עושה כלום,
     // ולכן שם חוזרים לפי אינדקס.
-    if (this.isPortrait()) {
-      const idx = this.idxOf(clamp(this.current - 1, 1, this.source.numPages));
-      try { this.pageFlip.turnToPage(idx); } catch (e) { this.fail(e); return; }
-      this._syncFromLibrary();
-      this.reconcile(idx);
-      return;
-    }
-    try { this.pageFlip.flipPrev('top'); } catch (e) { this.fail(e); }
+    if (this.isPortrait()) { this._stepByIndex(-1); return; }
+    try { this.pageFlip[READING.backward]('top'); } catch (e) { this.fail(e); }
   }
 
   /**
@@ -2024,10 +2058,11 @@ function initKeyboard() {
 
     switch (e.key) {
       // ⚠️ בעברית העמוד הבא נמצא משמאל. חץ שמאלה = קדימה.
-      case 'ArrowLeft':
+      // ⚠️ החץ הימני מקדם — אותו כיוון כמו לחצן הדפדוף הימני.
+      case 'ArrowRight':
       case 'PageDown':
         e.preventDefault(); Reader.view.advance(); break;
-      case 'ArrowRight':
+      case 'ArrowLeft':
       case 'PageUp':
         e.preventDefault(); Reader.view.retreat(); break;
       case ' ':
