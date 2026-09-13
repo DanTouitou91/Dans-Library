@@ -95,9 +95,9 @@
          ⚠️ SVG ולא תווי טקסט בכוונה: תווי חצים מסוג סוגריים נושאים
          Bidi_Mirrored, והדפדפן מצייר אותם הפוך בהקשר RTL. ל-path אין
          שום התנהגות דו-כיוונית — הצורה נקבעת כאן ונשארת. -->
-    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></symbol>
-    <!-- ⚠️ "הבא" מצביע ימינה: הדפדוף קדימה הוא שמאלה→ימינה. ראו READING. -->
-    <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></symbol>
+    <!-- ⚠️ "הבא" מצביע שמאלה כי הלחצן שמקדם יושב בצד שמאל. -->
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></symbol>
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/><path d="M4.5 12H15"/></symbol>
     <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M7 4.5h10a1 1 0 0 1 1 1v14l-6-3.8-6 3.8v-14a1 1 0 0 1 1-1z"/></symbol>
     <symbol id="i-quill" viewBox="0 0 24 24"><path d="M19.5 4.5c-8 1-12.5 5-13.5 9.5L5 19l5-1c4.5-1 8.5-5.5 9.5-13.5z"/><path d="m5.5 18.5 5.5-5.5"/></symbol>
@@ -229,7 +229,7 @@
     </div>
 
     <div class="toolbar__group toolbar__group--center">
-      <button type="button" class="btn btn--brass btn--icon" data-act="next" title="העמוד הבא" aria-label="העמוד הבא"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-next"/></svg></button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="prev" title="העמוד הקודם" aria-label="העמוד הקודם"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-prev"/></svg></button>
 
       <form class="pagebox" data-act="goto-form">
         <label class="sr-only" for="page-input">מעבר לעמוד</label>
@@ -238,7 +238,7 @@
         <span class="pagebox__total" data-page-total>—</span>
       </form>
 
-      <button type="button" class="btn btn--brass btn--icon" data-act="prev" title="העמוד הקודם" aria-label="העמוד הקודם"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-prev"/></svg></button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="next" title="העמוד הבא" aria-label="העמוד הבא"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-next"/></svg></button>
     </div>
 
     <div class="toolbar__group toolbar__group--end">

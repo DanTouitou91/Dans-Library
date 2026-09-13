@@ -898,6 +898,18 @@ ul { margin: 0; padding: 0; list-style: none; }
     rgba(20,13,5,.20), transparent 100%);
 }
 
+/* ⚠️ הכריכה הקדמית בלבד: רמז השדרה עובר לקצה הימני.
+   הספר נפתח לכיוון ימין (ראו READING), ולכן שם נמצא הציר שסביבו הוא
+   נפתח. העמוד האחרון הוא סוף הספר ולא נפתח משום מקום, ולכן הוא נשאר
+   עם הרמז בקצה השמאלי — ומכאן שהכלל מכוון ל-[data-page="1"] בלבד.
+   ⚠️ left/right כאן פיזיים בכוונה, כמו בכל צללי השדרה בקובץ. */
+#flip-book.is-closed .leaf[data-page="1"] .leaf-inner::before {
+  left: auto;
+  right: 0;
+  background: linear-gradient(to left,
+    rgba(20,13,5,.20), transparent 100%);
+}
+
 /* עמוד בגודל חריג — מסגרת עדינה שמסבירה את הלטרבוקס */
 .leaf--odd-size .leaf-canvas { box-shadow: 0 0 0 1px rgba(0,0,0,.10), 0 2px 8px rgba(0,0,0,.12); }
 
@@ -1328,11 +1340,12 @@ ul { margin: 0; padding: 0; list-style: none; }
   opacity: .35;
   transition: opacity .2s ease, background .2s ease, scale .2s ease;
 }
-/* ⚠️ "הבא" יושב בצד ימין. הדפדוף קדימה מעיף את הדף שמאלה→ימינה
-   (ראו READING ב-script.js), ולכן הלחצן שמקדם הוא הימני.
-   inset-inline-start הוא ימין ב-RTL. */
-.page-nav--next { inset-inline-start: clamp(.4rem, 2vw, 1.4rem); }
-.page-nav--prev { inset-inline-end: clamp(.4rem, 2vw, 1.4rem); }
+/* ⚠️ "הבא" יושב בצד שמאל, לבקשת דן: החץ השמאלי מקדם והימני מחזיר.
+   שימו לב שזה *עצמאי* מכיוון האנימציה — הדף עדיין נע שמאלה→ימינה
+   (READING.forward = flipPrev). מיקום הלחצן הוא העדפת ממשק בלבד.
+   inset-inline-end הוא שמאל ב-RTL. */
+.page-nav--next { inset-inline-end: clamp(.4rem, 2vw, 1.4rem); }
+.page-nav--prev { inset-inline-start: clamp(.4rem, 2vw, 1.4rem); }
 .page-nav .icon { inline-size: 1.5rem; block-size: 1.5rem; }
 
 .view--reader:hover .page-nav { opacity: .72; }

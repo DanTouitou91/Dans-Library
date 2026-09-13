@@ -2058,11 +2058,11 @@ function initKeyboard() {
 
     switch (e.key) {
       // ⚠️ בעברית העמוד הבא נמצא משמאל. חץ שמאלה = קדימה.
-      // ⚠️ החץ הימני מקדם — אותו כיוון כמו לחצן הדפדוף הימני.
-      case 'ArrowRight':
+      // ⚠️ החץ השמאלי מקדם, בהתאם למיקום לחצן "הבא" בצד שמאל.
+      case 'ArrowLeft':
       case 'PageDown':
         e.preventDefault(); Reader.view.advance(); break;
-      case 'ArrowLeft':
+      case 'ArrowRight':
       case 'PageUp':
         e.preventDefault(); Reader.view.retreat(); break;
       case ' ':
