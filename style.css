@@ -835,6 +835,7 @@ ul { margin: 0; padding: 0; list-style: none; }
    ספציפיים יותר — ולכן הם גוברים בלי קשר לסדר. */
 html,
 .stage,
+.finder,
 .finder__list,
 .notepad__text {
   scrollbar-width: thin;
@@ -843,6 +844,7 @@ html,
 
 html::-webkit-scrollbar,
 .stage::-webkit-scrollbar,
+.finder::-webkit-scrollbar,
 .finder__list::-webkit-scrollbar,
 .notepad__text::-webkit-scrollbar {
   inline-size: 11px;
@@ -851,6 +853,7 @@ html::-webkit-scrollbar,
 
 html::-webkit-scrollbar-track,
 .stage::-webkit-scrollbar-track,
+.finder::-webkit-scrollbar-track,
 .finder__list::-webkit-scrollbar-track,
 .notepad__text::-webkit-scrollbar-track {
   background: var(--sb-track);
@@ -860,6 +863,7 @@ html::-webkit-scrollbar-track,
 /* הידית: פליז מלוטש עם שוליים שקופים, כדי שתיראה דקה ומרווחת */
 html::-webkit-scrollbar-thumb,
 .stage::-webkit-scrollbar-thumb,
+.finder::-webkit-scrollbar-thumb,
 .finder__list::-webkit-scrollbar-thumb,
 .notepad__text::-webkit-scrollbar-thumb {
   border-radius: 8px;
@@ -873,6 +877,7 @@ html::-webkit-scrollbar-thumb,
 
 html::-webkit-scrollbar-thumb:hover,
 .stage::-webkit-scrollbar-thumb:hover,
+.finder::-webkit-scrollbar-thumb:hover,
 .finder__list::-webkit-scrollbar-thumb:hover,
 .notepad__text::-webkit-scrollbar-thumb:hover {
   background-image: linear-gradient(180deg,
@@ -1502,6 +1507,7 @@ html::-webkit-scrollbar-corner,
   z-index: 9;
   inline-size: min(420px, 92vw);
   display: flex; flex-direction: column;
+  overflow-y: auto; overscroll-behavior: contain;
   padding: 1rem clamp(.9rem, 2vw, 1.3rem) 1rem;
   color: var(--ink);
   background-color: var(--paper);
@@ -1579,7 +1585,12 @@ html::-webkit-scrollbar-corner,
 }
 .finder__del:hover { background: rgba(110,29,43,.28); }
 
-.finder__marks { display: flex; flex-direction: column; min-block-size: 0; flex: 1 1 auto; }
+/* ⚠️ הפאנל תוכנן לשני מקטעים. תוכן העניינים הוא שלישי, והוא ארוך —
+   וכשכל אחד מהם מבקש flex:1 הם נלחמים על הגובה, המקטעים נמעכים,
+   והתוכן הארוך גולש מעל השכנים ובולע קליקים. לכן שני המקטעים מקבלים
+   את גובהם הטבעי, והגלילה עברה לפאנל עצמו (ראו .finder). */
+.finder__marks { display: flex; flex-direction: column; flex: 0 0 auto; }
+.finder__marks .finder__list { overflow: visible; flex: 0 0 auto; }
 .finder__empty {
   font-size: .82rem; color: var(--ink-soft); line-height: 1.6;
   padding: .6rem .2rem;
@@ -1589,6 +1600,67 @@ html::-webkit-scrollbar-corner,
   padding: .05em .35em; border-radius: 3px;
   background: rgba(120,85,40,.18);
 }
+
+/* ---------- תוכן העניינים ---------- */
+/* ⚠️ הרשימה כאן אינה flex:1 כמו finder__list: תוכן העניינים הוא החלק
+   הארוך בפאנל, ואם גם הוא וגם הסימניות נלחמים על הגובה, שניהם מקבלים
+   חלון צר עם גלילה משלו. כאן הוא פשוט נמשך לאורכו, והפאנל גולל. */
+.finder__toc { display: flex; flex-direction: column; flex: 0 0 auto; }
+.toc, .toc__level { list-style: none; margin: 0; padding: 0; overflow: visible; flex: 0 0 auto; }
+.toc__level { display: none; }
+.toc__level:not([hidden]) { display: block; }
+
+.toc__row { display: flex; align-items: stretch; gap: .2rem; }
+.toc__link {
+  flex: 1 1 auto;
+  display: flex; justify-content: space-between; align-items: baseline; gap: .6rem;
+  inline-size: 100%; text-align: start;
+  padding: .42rem .4rem;
+  border: none; border-block-end: 1px solid rgba(120,85,40,.14);
+  background: none; cursor: pointer; color: inherit;
+  font-family: var(--font-body); font-size: .84rem; line-height: 1.45;
+}
+.toc__link:hover, .toc__link:focus-visible { background: rgba(120,85,40,.1); }
+.toc__title { min-inline-size: 0; }
+.toc__page {
+  flex: 0 0 auto;
+  font-family: var(--font-ui); font-size: .68rem;
+  color: var(--burgundy); opacity: .8;
+}
+
+/* הרמה העליונה היא רשימת הפרקים, ולכן היא בולטת יותר מהסעיפים שתחתיה */
+.toc > .toc__item > .toc__row > .toc__link {
+  font-family: var(--font-display); font-size: .92rem; color: var(--ink);
+}
+/* ⚠️ padding-inline-start ולא padding-left: ההזחה חייבת להתהפך ב-RTL,
+   אחרת הסעיפים נסוגים מהצד הלא נכון */
+.toc__level .toc__link { padding-inline-start: 1.1rem; opacity: .92; }
+.toc__level .toc__level .toc__link { padding-inline-start: 2.2rem; font-size: .8rem; }
+
+.toc__toggle {
+  flex: 0 0 auto; align-self: center;
+  inline-size: 26px; block-size: 26px;
+  display: grid; place-items: center;
+  border: none; border-radius: 50%;
+  background: rgba(120,85,40,.12); color: var(--ink-soft);
+  cursor: pointer;
+}
+.toc__toggle:hover { background: rgba(120,85,40,.24); color: var(--ink); }
+.toc__toggle .icon { inline-size: 15px; block-size: 15px; }
+/* ⚠️ rotate הוא פיזי ואינו מתהפך ב-RTL, ולכן הסיבוב הבסיסי מפורש כאן.
+   ה-path של #i-chevron מצביע ימינה; בממשק עברי חץ סגור צריך להצביע
+   שמאלה, לכיוון זרימת הטקסט — ומכאן 180°. פתוח מסתובב ל-90° (למטה). */
+.toc__toggle .icon { rotate: 180deg; transition: rotate .18s ease; }
+.toc__item.is-open > .toc__row > .toc__toggle .icon { rotate: 90deg; }
+
+/* ---------- ייצוא ההערות ---------- */
+.notepad__export { margin: .6rem 0 0; }
+.notepad__exportbtn {
+  inline-size: 100%;
+  display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+  font-size: .8rem; padding-block: .5rem;
+}
+.notepad__exportbtn .icon { inline-size: 17px; block-size: 17px; }
 
 /* ---------- חצי דפדוף על הספר ---------- */
 

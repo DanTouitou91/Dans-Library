@@ -479,7 +479,10 @@ const Shelf = {
    * מסומן aria-hidden כי לשדרה כבר יש aria-label עם אותו שם — בלי זה קורא
    * מסך היה מקריא את הכותרת פעמיים.
    * ------------------------------------------------------------------------ */
-  TIP_DELAY: 1000,
+  // דן ביקש שהתווית תופיע מיד. אפס ולא "כמעט אפס": setTimeout עם 0 עדיין
+  // דוחה לסיבוב האירועים הבא, וזה מספיק כדי שהיא לא תיבנה באמצע הטיפול
+  // באירוע עצמו — אבל מבחינת המשתמש זו הופעה מיידית.
+  TIP_DELAY: 0,
 
   tipEl() {
     if (this._tip?.isConnected) return this._tip;
@@ -505,6 +508,30 @@ const Shelf = {
     // רוחב קטן ב-3%, ומרכוז שמפספס. offsetWidth הוא ערך הפריסה.
     // המדידה חייבת לקרות אחרי שהטקסט כבר בפנים, אחרת הרוחב שייך
     // לכותרת הקודמת.
+    this.placeTip(spineEl);
+
+    requestAnimationFrame(() => el.classList.add('is-on'));
+
+    // ⚠️ השדרה עצמה נעה בריחוף (translateY(-16px) ו-rotate) לאורך 0.28ש.
+    // המדידה למעלה תופסת אותה באמצע התנועה, ולכן התווית נוחתת נמוך מדי
+    // ויושבת על הספר. כל עוד הייתה השהיה של שנייה הבעיה לא התגלתה —
+    // הספר כבר סיים לנוע. עכשיו ממקמים שוב כשהתנועה נגמרת.
+    clearTimeout(this._tipSettle);
+    const settle = () => {
+      if (this._tipFor !== spineEl) return;      // העכבר כבר עבר לספר אחר
+      this.placeTip(spineEl);
+    };
+    this._tipFor = spineEl;
+    spineEl.addEventListener('transitionend', settle, { once: true });
+    // גיבוי: ב-prefers-reduced-motion אין מעבר, ולכן transitionend לא יגיע
+    this._tipSettle = setTimeout(settle, 340);
+  },
+
+  /** ממקם את התווית מול השדרה. מופרד מ-showTip כדי שאפשר יהיה למקם שוב. */
+  placeTip(spineEl) {
+    const el = this._tip;
+    if (!el || el.hidden || !spineEl.isConnected) return;
+
     const r = spineEl.getBoundingClientRect();
     const tw = el.offsetWidth;
     const th = el.offsetHeight;
@@ -524,12 +551,12 @@ const Shelf = {
     // החץ עוקב אחרי מרכז השדרה גם כשהתווית נדחפה פנימה מקצה המסך
     el.style.setProperty('--tip-arrow',
       `${Math.round(Math.min(Math.max(r.left + r.width / 2 - left, 12), tw - 12))}px`);
-
-    requestAnimationFrame(() => el.classList.add('is-on'));
   },
 
   hideTip() {
     clearTimeout(this._tipTimer);
+    clearTimeout(this._tipSettle);
+    this._tipFor = null;
     const el = this._tip;
     if (!el || el.hidden) return;
     el.classList.remove('is-on');
@@ -932,6 +959,67 @@ class BookSource {
       return pages;
     })();
     return this._indexing;
+  }
+
+  /**
+   * תוכן העניינים המוטבע בקובץ, שטוח ועם מספרי עמודים אמיתיים.
+   *
+   * כל ארבעת הספרים נושאים עץ מלא (210 ערכים בגדול שבהם), אבל היעדים
+   * שמורים כהפניות פנימיות ולא כמספרי עמוד — ולכן כל ערך נפתר דרך
+   * getDestination/getPageIndex. הפתרון נעשה פעם אחת ונשמר במטמון.
+   */
+  async outline() {
+    if (this._outline) return this._outline;
+    this._outline = (async () => {
+      let tree;
+      try { tree = await this.doc.getOutline(); } catch { tree = null; }
+      if (!tree || !tree.length) return [];
+
+      // הערך היחיד ברמה העליונה הוא שם הספר, והוא כבר מופיע בסרגל
+      const roots = tree.length === 1 && tree[0].items?.length ? tree[0].items : tree;
+
+      const flat = [];
+      const walk = (nodes, depth) => {
+        for (const n of nodes) {
+          flat.push({ title: BookSource.tidyTitle(n.title || ''), depth, dest: n.dest, page: 0 });
+          if (n.items?.length) walk(n.items, depth + 1);
+        }
+      };
+      walk(roots, 0);
+
+      for (const item of flat) {
+        try {
+          let dest = item.dest;
+          if (typeof dest === 'string') dest = await this.doc.getDestination(dest);
+          item.page = dest ? (await this.doc.getPageIndex(dest[0])) + 1 : 0;
+        } catch { item.page = 0; }
+        delete item.dest;
+      }
+      // ערך בלי יעד שאפשר לפתור אינו ניתן ללחיצה, ואין טעם להציג אותו
+      return flat.filter((i) => i.page > 0 && i.title);
+    })();
+    return this._outline;
+  }
+
+  /**
+   * ⚠️ תיקון תחום לפגם בקבצים עצמם, לא פיצול מילים כללי.
+   *
+   * בכותרות הפרקים הרווח בין מספר הפרק לשמו חסר בקובץ:
+   * "01 · פרק ראשוןמהי מדיניות ציבורית". אין שם תו שורה לשחזר — בדקתי —
+   * ולכן אי אפשר להסתמך על נירמול רגיל.
+   *
+   * הכלל מוגבל בכוונה לתבנית "מספר · פרק <מספר סתמי ידוע>" שאחריה אות
+   * עברית **בלי רווח**. ה-lookahead הזה הוא מה שהופך אותו לבטוח: כותרת
+   * שכבר מרווחת נכון לא תתאים לו לעולם, ולכן הוא אינו יכול לשבור כותרת
+   * תקינה. בשום מקרה אחר אין ניסיון לנחש גבולות מילים בעברית.
+   */
+  static tidyTitle(raw) {
+    const ordinals = 'ראשון|שני|שלישי|רביעי|חמישי|שישי|שביעי|שמיני|תשיעי|עשירי'
+      + '|אחד עשר|שנים עשר|שלושה עשר|ארבעה עשר|חמישה עשר';
+    return String(raw)
+      .replace(new RegExp(`^(\\s*\\d+\\s*·\\s*פרק\\s+(?:${ordinals}))(?=[א-ת])`), '$1 ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   /**
@@ -1921,6 +2009,14 @@ const Reader = {
     $('[data-loader-progress]').textContent = '';
     $('#reader-stage').replaceChildren();
 
+    // תוכן העניינים שייך לספר, ולא לפאנל: בלי האיפוס הזה ספר שני היה
+    // מציג את הפרקים של הראשון
+    this._tocDrawn = false;
+    this._tocToken = null;
+    $('[data-toc-list]')?.replaceChildren();
+    const tocEmpty = $('[data-toc-empty]');
+    if (tocEmpty) { tocEmpty.hidden = true; tocEmpty.textContent = ''; }
+
     try {
       this.source = await BookSource.openWithRetry(book, ({ loaded, total }) => {
         if (total) {
@@ -1941,6 +2037,14 @@ const Reader = {
 
     $('#loader').hidden = true;
     $('#reader-stage').focus({ preventScroll: true });
+
+    // ⚠️ הפאנל עשוי להיות פתוח כבר מהספר הקודם. תוכן העניינים והסימניות
+    // מצוירים רק ברגע *פתיחת* הפאנל, ולכן מעבר בין ספרים בלי לסגור אותו
+    // השאיר את שניהם על נתוני הספר הקודם — התוכן ריק, והסימניות זרות.
+    if (!$('#finder').hidden) {
+      this.renderMarksList();
+      if (!this._tocDrawn) this.renderToc();
+    }
   },
 
   decideMode() {
@@ -2060,6 +2164,7 @@ const Reader = {
       case 'find-close':  this.toggleFind(false); break;
       case 'notes':       this.toggleNotes(); break;
       case 'notes-close': this.toggleNotes(false); break;
+      case 'notes-export': this.exportNotes(); break;
       case 'zoom-in':     this.setZoom(this.zoom + 0.15); break;
       case 'zoom-out':    this.setZoom(this.zoom - 0.15); break;
       case 'mode':        this.toggleMode(); break;
@@ -2136,6 +2241,103 @@ const Reader = {
     document.querySelectorAll('#reader-stage .leaf-hl').forEach((el) => el.remove());
   },
 
+  /**
+   * מצייר את תוכן העניינים בפאנל.
+   *
+   * ⚠️ 210 ערכים הם רשימה ארוכה מדי לפרישה מלאה. לכן כל ענף עם צאצאים
+   * מצויר סגור, והרמה העליונה בלבד גלויה — מה שנותן רשימת פרקים קומפקטית
+   * עם צלילה פנימה, במקום מגילה שצריך לגלול דרכה.
+   */
+  async renderToc() {
+    const list = $('[data-toc-list]');
+    const empty = $('[data-toc-empty]');
+    if (!list || !this.source?.outline) return;
+
+    const token = Symbol('toc');
+    this._tocToken = token;
+    list.replaceChildren();
+    empty.hidden = false;
+    empty.textContent = 'קורא את תוכן העניינים…';
+
+    let items = [];
+    try { items = await this.source.outline(); } catch { items = []; }
+    // ציור שנקטע אינו נחשב "צויר", אחרת לא תהיה ניסיון נוסף
+    if (this._tocToken !== token) return;        // הוחלף ספר בינתיים
+
+    if (!items.length) {
+      this._tocDrawn = true;
+      empty.textContent = 'בקובץ הזה אין תוכן עניינים מוטבע.';
+      return;
+    }
+    empty.hidden = true;
+
+    // בניית עץ מתוך הרשימה השטוחה, לפי עומק
+    const build = (from, depth) => {
+      const ol = document.createElement('ol');
+      ol.className = 'toc__level';
+      let i = from;
+      while (i < items.length && items[i].depth >= depth) {
+        if (items[i].depth > depth) { i++; continue; }   // נאסף בקריאה הפנימית
+        const item = items[i];
+        const li = document.createElement('li');
+        li.className = 'toc__item';
+
+        const row = document.createElement('div');
+        row.className = 'toc__row';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'toc__link';
+        btn.dataset.goto = String(item.page);
+        const t = document.createElement('span');
+        t.className = 'toc__title';
+        t.textContent = item.title;
+        const pg = document.createElement('span');
+        pg.className = 'toc__page';
+        pg.textContent = String(item.page);
+        btn.append(t, pg);
+        row.append(btn);
+
+        const hasKids = i + 1 < items.length && items[i + 1].depth === depth + 1;
+        let kids = null;
+        if (hasKids) {
+          kids = build(i + 1, depth + 1);
+          kids.hidden = true;
+          kids.id = `toc-${depth}-${i}`;
+
+          const tog = document.createElement('button');
+          tog.type = 'button';
+          tog.className = 'toc__toggle';
+          tog.setAttribute('aria-expanded', 'false');
+          tog.setAttribute('aria-controls', kids.id);
+          tog.setAttribute('aria-label', `הרחבת ${item.title}`);
+          tog.innerHTML = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-chevron"/></svg>';
+          // הלחצן המרחיב נפרד מלחצן הקפיצה: לחצן בתוך לחצן אינו חוקי,
+          // ושתי הפעולות באמת שונות
+          tog.addEventListener('click', () => {
+            const open = kids.hidden;
+            kids.hidden = !open;
+            tog.setAttribute('aria-expanded', String(open));
+            li.classList.toggle('is-open', open);
+          });
+          row.append(tog);
+        }
+
+        li.append(row);
+        if (kids) li.append(kids);
+        ol.append(li);
+
+        // דילוג על כל תת-העץ שכבר נבנה
+        i++;
+        while (i < items.length && items[i].depth > depth) i++;
+      }
+      return ol;
+    };
+
+    list.replaceChildren(...build(0, 0).childNodes);
+    this._tocDrawn = true;
+  },
+
   toggleFind(force) {
     const el = $('#finder');
     const show = force != null ? force : el.hidden;
@@ -2143,6 +2345,11 @@ const Reader = {
     $('[data-act="find"]').setAttribute('aria-expanded', String(show));
     if (show) {
       this.renderMarksList();
+      // נטען בעצלתיים: פתירת 210 יעדים אינה עבודה שצריך לעשות בפתיחת הספר.
+      // ⚠️ הדגל נקבע בתוך renderToc ורק אחרי ציור שהצליח. סימון אופטימי
+      // כאן השאיר את הפאנל ריק לתמיד אם הציור נקטע באמצע — בדיוק מה
+      // שקרה כשהפאנל נפתח בזמן שהספר עוד נטען.
+      if (!this._tocDrawn) this.renderToc();
       $('#find-input').focus();
       $('#find-input').select();
     }
@@ -2161,17 +2368,20 @@ const Reader = {
     const q = this._normalize(query).trim();
     const list = $('[data-find-results]');
     const marks = $('[data-find-marks]');
+    const toc = $('[data-find-toc]');
     const status = $('[data-find-status]');
 
     if (this._highlightQuery && this._highlightQuery !== q) this.clearHighlights();
     if (q.length < 2) {                 // שאילתה קצרה מדי תחזיר הכול
       list.hidden = true; list.replaceChildren();
       marks.hidden = false;
+      if (toc) toc.hidden = false;
       status.textContent = q ? 'הקלידו שתי אותיות לפחות.' : '';
       return;
     }
 
     marks.hidden = true;
+    if (toc) toc.hidden = true;
     status.textContent = 'סורק את הספר…';
     const token = Symbol('search');
     this._searchToken = token;
@@ -2276,6 +2486,39 @@ const Reader = {
     if (show) $('#notepad-text').focus();
   },
 
+  /**
+   * מוריד את הערות הספר הנוכחי כמסמך Word.
+   *
+   * ⚠️ זה ייצוא ולא גיבוי: הקובץ נועד לקריאה ולעריכה ב-Word, ואין דרך
+   * לטעון אותו בחזרה לאתר. ההערות עצמן ממשיכות לחיות ב-localStorage.
+   */
+  exportNotes() {
+    if (!this.book) return;
+    const status = $('[data-notepad-status]');
+    const text = $('#notepad-text').value;
+    if (!text.trim()) {
+      status.textContent = 'הפנקס ריק — אין מה לייצא';
+      return;
+    }
+    this.flushNotes();
+    try {
+      const today = new Date().toLocaleDateString('he-IL',
+        { year: 'numeric', month: 'long', day: 'numeric' });
+      const blob = Docx.build({
+        title: `הערות · ${this.book.title}`,
+        subtitle: `מתוך אוסף ספרי הלמידה של דן · יוצא בתאריך ${today}`,
+        body: text,
+      });
+      // שם הקובץ נוקה מתווים שמערכות קבצים אינן מקבלות
+      const safe = this.book.title.replace(/[\\/:*?"<>|]/g, '').trim();
+      Docx.save(blob, `הערות - ${safe}.docx`);
+      status.textContent = 'הקובץ ירד';
+    } catch (err) {
+      console.error('[notes-export]', err);
+      status.textContent = 'הייצוא נכשל — נסו שוב';
+    }
+  },
+
   updateNoteCount() {
     const LIMIT = 100000;
     const len = $('#notepad-text').value.length;
@@ -2358,6 +2601,11 @@ const Reader = {
     $('#notepad').hidden = true;
     $('#finder').hidden = true;
     $('#find-input').value = '';
+    this._tocDrawn = false;
+    this._tocToken = null;
+    $('[data-toc-list]')?.replaceChildren();
+    const tocEmpty = $('[data-toc-empty]');
+    if (tocEmpty) { tocEmpty.hidden = true; tocEmpty.textContent = ''; }
     this.clearHighlights();
     $('#reader-view').hidden = true;
     $('#shelf-view').hidden = false;
@@ -2502,6 +2750,146 @@ function initKeyboard() {
     }
   });
 }
+
+/* ============================================================================
+ * §8ב — ייצוא ל-Word (.docx)
+ * ==========================================================================
+ * docx הוא ארכיון ZIP ובו כמה קובצי XML. אין כאן ספריית zip, ו-CSP חוסם
+ * CDN — ולכן הארכיון נכתב כאן, בשיטת "store" (בלי דחיסה). טקסט הערות הוא
+ * קילובייטים בודדים, כך שהוויתור על הדחיסה זול, והוא חוסך מימוש שלם של
+ * deflate.
+ *
+ * ⚠️ הכול דו-כיווני במפורש: w:bidi בפסקה, w:rtl בריצה ו-w:bidi ב-sectPr.
+ * בלעדיהם Word פותח מסמך עברי עם יישור וסדר פסקאות שמאליים.
+ * ========================================================================== */
+
+const Docx = {
+  CRC_TABLE: (() => {
+    const t = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[i] = c >>> 0;
+    }
+    return t;
+  })(),
+
+  crc32(bytes) {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) c = this.CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  },
+
+  /** ZIP בשיטת store. מחזיר Blob. */
+  zip(files) {
+    const enc = new TextEncoder();
+    const parts = [];
+    const central = [];
+    let offset = 0;
+
+    const u16 = (n) => [n & 0xFF, (n >>> 8) & 0xFF];
+    const u32 = (n) => [n & 0xFF, (n >>> 8) & 0xFF, (n >>> 16) & 0xFF, (n >>> 24) & 0xFF];
+
+    for (const [name, text] of files) {
+      const nameBytes = enc.encode(name);
+      const data = enc.encode(text);
+      const crc = this.crc32(data);
+
+      // דגל 0x0800 מכריז ששמות הקבצים ב-UTF-8. חותמת הזמן קבועה בכוונה,
+      // כדי שאותן הערות יפיקו קובץ זהה בייטים.
+      const head = [
+        ...u32(0x04034B50), ...u16(20), ...u16(0x0800), ...u16(0),
+        ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length),
+        ...u16(nameBytes.length), ...u16(0),
+      ];
+      parts.push(new Uint8Array(head), nameBytes, data);
+
+      // ⚠️ זוג אחד באיבר אחד. push(head, name) היה דוחף שני איברים נפרדים,
+      // הפירוק שבלולאה למטה היה מפרק מערך בייטים, והספרייה המרכזית
+      // הייתה יוצאת זבל — ארכיון שנפתח כתקין אבל בלי אף קובץ בתוכו.
+      central.push([[
+        ...u32(0x02014B50), ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0),
+        ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length),
+        ...u16(nameBytes.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0),
+        ...u32(0), ...u32(offset),
+      ], nameBytes]);
+
+      offset += head.length + nameBytes.length + data.length;
+    }
+
+    const cdParts = [];
+    let cdSize = 0;
+    for (const [head, nameBytes] of central) {
+      cdParts.push(new Uint8Array(head), nameBytes);
+      cdSize += head.length + nameBytes.length;
+    }
+    const end = new Uint8Array([
+      ...u32(0x06054B50), ...u16(0), ...u16(0),
+      ...u16(central.length), ...u16(central.length),
+      ...u32(cdSize), ...u32(offset), ...u16(0),
+    ]);
+
+    return new Blob([...parts, ...cdParts, end],
+      { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  },
+
+  esc(s) {
+    return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  },
+
+  /** פסקה דו-כיוונית אחת. size הוא חצאי-נקודות, כמקובל ב-OOXML. */
+  para(text, { size = 22, bold = false, after = 120 } = {}) {
+    const rPr = `<w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Arial"/>`
+      + (bold ? '<w:b/><w:bCs/>' : '')
+      + `<w:sz w:val="${size}"/><w:szCs w:val="${size}"/><w:rtl/></w:rPr>`;
+    // ⚠️ סדר הילדים ב-w:pPr אינו חופשי — הסכמה קובעת רצף, ובו bidi בא
+    // לפני spacing ו-spacing לפני jc. קורא קפדן פוסל מסמך עם סדר אחר.
+    // xml:space="preserve" שומר על רווחים בתחילת שורה ובסופה
+    return `<w:p><w:pPr><w:bidi/><w:spacing w:after="${after}"/>`
+      + `<w:jc w:val="right"/></w:pPr>`
+      + `<w:r>${rPr}<w:t xml:space="preserve">${this.esc(text)}</w:t></w:r></w:p>`;
+  },
+
+  build({ title, subtitle, body }) {
+    const paras = [
+      this.para(title, { size: 32, bold: true, after: 60 }),
+      subtitle ? this.para(subtitle, { size: 18, after: 320 }) : '',
+      // שורה ריקה במקור היא הפרדה בין פסקאות, ולא פסקה ריקה במסמך
+      ...String(body).split(/\n/).map((line) => this.para(line || ' ')),
+    ].join('');
+
+    // ⚠️ xmlns:r חייב להיות מוכרז גם כשאין אף הפניה במסמך. קוראים אמיתיים
+    // ניגשים ל-nsmap['r'] בלי לבדוק שהוא קיים, ומסמך שמכריז רק על w
+    // מפיל אותם. זה מה שקרה כאן, ורק קורא שני חשף את זה.
+    const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><w:body>${paras}<w:sectPr><w:bidi/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr></w:body></w:document>`;
+
+    return this.zip([
+      ['[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`],
+      ['_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`],
+      ['word/document.xml', document],
+      // ריק, אבל חייב להתקיים: חבילת OOXML שבה לחלק הראשי אין קובץ יחסים
+      // אינה תקנית, גם כשאין לו למה להתייחס
+      ['word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>`],
+    ]);
+  },
+
+  /** מוריד Blob בשם נתון. */
+  save(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.append(a);
+    a.click();
+    // שחרור מיידי היה מבטל הורדה שטרם התחילה בחלק מהדפדפנים
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
+  },
+};
 
 /* ============================================================================
  * §12 — אתחול
