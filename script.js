@@ -1074,7 +1074,13 @@ const PageFlipCtor = window.St?.PageFlip || window.PageFlip || null;
  * מימין. הכפולות נשמרות בסדר הקריאה, ורק שני העמודים שבתוך כל כפולה
  * מוחלפים — כך שהנמוך יושב מימין, כנדרש בעברית.
  */
-function buildLeafPlan(numPages) {
+function buildLeafPlan(numPages, portrait = false) {
+  // ⚠️ בתצוגת עמוד בודד (מסך צר) StPageFlip מציגה עלה אחד בכל פעם, *לפי
+  // סדר ה-DOM*. תוכנית הכפולות שמחליפה צדדים ([ריק,1] [3,2] [5,4]) נותנת
+  // שם סדר קריאה שגוי — 1, 3, 2, 5, 4 — ומעבר של צעד אחד אחורה אפילו לא
+  // מצליח להתבצע. לכן במסך צר התוכנית היא פשוט סדר העמודים הטבעי.
+  if (portrait) return Array.from({ length: numPages }, (_, i) => i + 1);
+
   if (numPages <= 1) return [null, 1];
 
   const plan = [];
@@ -1112,7 +1118,10 @@ class FlipReader {
     this.onPageChange = onPageChange;
     this.container = container;
 
-    this.plan = buildLeafPlan(source.numPages);
+    // מנבאים את האוריינטציה לפני הבנייה, כי התוכנית תלויה בה. אחרי
+    // האתחול משווים לאוריינטציה האמיתית ומתקנים אם פספסנו.
+    this.portrait = this._forcePortrait ?? this.predictPortrait(container);
+    this.plan = buildLeafPlan(source.numPages, this.portrait);
     this.pageToLeaf.clear();
     this.plan.forEach((page, idx) => { if (page != null) this.pageToLeaf.set(page, idx); });
 
@@ -1164,6 +1173,37 @@ class FlipReader {
 
     this.goTo(startPage, { animate: false });
     this.observeResize();
+
+    // אם הספרייה בחרה אוריינטציה אחרת מזו שהנחנו, בונים מחדש עם
+    // התוכנית הנכונה. קורה פעם אחת לכל היותר.
+    if (this.isSpread() === this.portrait) await this.rebuild(!this.portrait);
+  }
+
+  /** האם צפויה תצוגת עמוד בודד. אותו סף שהספרייה עצמה משתמשת בו. */
+  predictPortrait(container) {
+    const cs = container ? getComputedStyle(container) : null;
+    const pad = cs ? parseFloat(cs.paddingInlineStart || 0) + parseFloat(cs.paddingInlineEnd || 0) : 0;
+    const w = Math.max(0, (container?.clientWidth || 0) - pad);
+    return w > 0 && w < 240 * 2;   // minWidth * 2, כמו ב-StPageFlip
+  }
+
+  /** בונה מחדש את הספר עם תוכנית העלים המתאימה לאוריינטציה. */
+  async rebuild(portrait) {
+    if (this._reinitializing || portrait === this.portrait) return;
+    this._reinitializing = true;
+    const page = this.current;
+    const { container, source, onPageChange } = this;
+    try {
+      for (const idx of Array.from(this.live.keys())) this.evict(idx);
+      try { this.pageFlip?.destroy(); } catch { /* כבר נהרס */ }
+      this.pageFlip = null;
+      this._forcePortrait = portrait;
+      this._reinitializing = false;
+      await this.mount(container, { source, startPage: page, onPageChange });
+    } finally {
+      this._forcePortrait = null;
+      this._reinitializing = false;
+    }
   }
 
   measureBox() {
@@ -1227,9 +1267,14 @@ class FlipReader {
       if (e.data === 'user_fold' || e.data === 'fold_corner' || e.data === 'read') {
         this.reconcile(this.pageFlip.getCurrentPageIndex());
       }
+      if (e.data === 'read') this._syncFromLibrary();
     });
 
-    this.pageFlip.on('changeOrientation', () => this.onResize());
+    this.pageFlip.on('changeOrientation', (e) => {
+      const portrait = String(e?.data) === 'portrait';
+      if (portrait !== this.portrait) { this.rebuild(portrait); return; }
+      this.onResize();
+    });
   }
 
   /**
@@ -1285,12 +1330,35 @@ class FlipReader {
   // כלום. התוצאה: במובייל אפשר היה רק לחזור אחורה, לא להתקדם.
   // לכן במסך צר מנווטים לפי מספר עמוד, שם כל כפולה היא עמוד אחד ממילא.
   advance() {
-    if (this.isPortrait()) { this.goTo(Math.min(this.current + 1, this.source.numPages)); return; }
+    // flipNext הוא "קדימה" גם בתצוגת עמוד בודד: הוא תופס את הדף הימני
+    // ומעיף אותו שמאלה — בדיוק תנועת הדפדוף של ספר עברי.
     try { this.pageFlip.flipNext('top'); } catch (e) { this.fail(e); }
   }
   retreat() {
-    if (this.isPortrait()) { this.goTo(Math.max(this.current - 1, 1)); return; }
+    // ⚠️ flipPrev מדמה מגע ב-x=10, כלומר בחצי השמאלי של התיבה. בתצוגת
+    // עמוד בודד אין שם עמוד (setLeftPage(null)) והקריאה לא עושה כלום,
+    // ולכן שם חוזרים לפי אינדקס.
+    if (this.isPortrait()) {
+      const idx = this.idxOf(clamp(this.current - 1, 1, this.source.numPages));
+      try { this.pageFlip.turnToPage(idx); } catch (e) { this.fail(e); return; }
+      this._syncFromLibrary();
+      this.reconcile(idx);
+      return;
+    }
     try { this.pageFlip.flipPrev('top'); } catch (e) { this.fail(e); }
+  }
+
+  /**
+   * מיישר את מספר העמוד לפי מה שהספרייה באמת מציגה.
+   * ⚠️ goTo עדכן את המונה מיד אחרי הבקשה לדפדף, בלי לוודא שהדף אכן זז —
+   * וכך במסך צר המספר התקדם בזמן שהעמוד נשאר במקומו. המונה נגזר עכשיו
+   * מהמצב בפועל.
+   */
+  _syncFromLibrary() {
+    try {
+      const pages = this.spreadPages(this.pageFlip.getCurrentPageIndex());
+      if (pages.length && !pages.includes(this.current)) this._emit(pages[0]);
+    } catch { /* הספרייה עוד לא מוכנה */ }
   }
 
   goTo(page, { animate = true } = {}) {
@@ -1303,6 +1371,11 @@ class FlipReader {
     }
     this._emit(page);
     this.reconcile(idx);
+    // ...ומיישרים מול המצב האמיתי אחרי שהאנימציה הספיקה להסתיים, למקרה
+    // שהדפדוף לא באמת התבצע. ⚠️ אסור לעשות זאת מיד: הספרייה עוד לא
+    // עדכנה את האינדקס שלה, והיישור היה דורס קפיצה מכוונת לעמוד.
+    clearTimeout(this._syncTimer);
+    this._syncTimer = setTimeout(() => this._syncFromLibrary(), 900);
   }
 
   getCurrentPage() { return this.current; }
