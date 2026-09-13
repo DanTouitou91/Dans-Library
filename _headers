@@ -3,13 +3,20 @@
 # ‎את זה ללא 'unsafe-inline'. בלי ההיתר הזה הקורא נטען אבל נשאר ריק לגמרי
 # ‎(נבדק). ההגנה המשמעותית נשארת: script-src הוא 'self' בלבד, בלי
 # ‎unsafe-inline ובלי unsafe-eval.
+#
+# ‎הערה על Google Analytics:
+# ‎‏gtag.js נטען מ-googletagmanager.com ומשדר ל-google-analytics.com, ולכן
+# ‎שלושת המקורות האלה נוספו ל-script-src, ל-connect-src ול-img-src. הקוד
+# ‎המוטבע שגוגל מספקת הועבר ל-assets/analytics.js **בכוונה**: הוספת
+# ‎'unsafe-inline' ל-script-src הייתה פותחת את האתר להזרקת קוד, וזה מחיר
+# ‎גבוה בהרבה מקובץ נפרד אחד. script-src נשאר בלי unsafe-inline.
 
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=(), interest-cohort=()
-  Content-Security-Policy: default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
 
 # ‎הספריות נעולות לגרסה מדויקת ולעולם לא משתנות תחת אותו נתיב.
 /vendor/*

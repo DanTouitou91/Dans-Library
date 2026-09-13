@@ -1,0 +1,41 @@
+name: בדיקות
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: התקנת תלויות
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright pillow python-docx
+          python -m playwright install --with-deps chromium
+
+      # ⚠️ חייבים את השרת הזה ולא http.server — הוא מגיש את _headers
+      # כלשונו, תומך ב-Range, ולא מנרמל / ל-/index.html.
+      # ראו tests/README.md.
+      - name: הפעלת שרת עם כותרות הייצור
+        run: |
+          python3 tests/cspserve.py &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:8788/ && break
+            sleep 1
+          done
+
+      - name: בדיקות זרימה
+        run: python3 tests/verify.py http://127.0.0.1:8788
+
+      - name: בדיקות CSP ורינדור
+        run: python3 tests/csp_check.py http://127.0.0.1:8788

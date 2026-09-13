@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=David+Libre:wght@400;500;700&family=Miriam+Libre:wght@400;700&display=swap">
 
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -107,6 +107,7 @@
     <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></symbol>
     <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.5C10 5.1 7.2 4.5 4.5 4.5v13c2.7 0 5.5.6 7.5 2 2-1.4 4.8-2 7.5-2v-13c-2.7 0-5.5.6-7.5 2z"/><path d="M12 6.5v13"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4.5 9.5v-4a1 1 0 0 1 1-1h4"/><path d="M19.5 9.5v-4a1 1 0 0 0-1-1h-4"/><path d="M4.5 14.5v4a1 1 0 0 0 1 1h4"/><path d="M19.5 14.5v4a1 1 0 0 1-1 1h-4"/></symbol>
+    <symbol id="i-keys" viewBox="0 0 24 24"><rect x="2.8" y="6.5" width="18.4" height="11" rx="1.6"/><path d="M6.4 10h.01M9.6 10h.01M12.8 10h.01M16 10h.01M17.6 13.2h.01M6.4 13.2h.01M9.2 13.9h5.6"/></symbol>
     <symbol id="i-toc" viewBox="0 0 24 24"><path d="M9 6.5h10.5M9 12h10.5M9 17.5h10.5"/><path d="M4.8 6.5h.01M4.8 12h.01M4.8 17.5h.01"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 5.5 15.5 12 9 18.5"/></symbol>
     <symbol id="i-word" viewBox="0 0 24 24"><path d="M6 3.5h7.5L19 9v11.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1z"/><path d="M13.5 3.5V9H19"/><path d="m8.4 12.2 1.3 5 1.6-3.6 1.6 3.6 1.3-5"/></symbol>
@@ -199,6 +200,22 @@
 <!-- ============================================================
      חלונית אודות
      ============================================================ -->
+<div id="keys-layer" class="overlay" hidden>
+  <div class="overlay__backdrop" data-close-layer></div>
+
+  <div class="tome tome--keys" role="dialog" aria-modal="true" aria-labelledby="keys-title" tabindex="-1">
+    <button type="button" class="tome__close" data-close-layer aria-label="סגירה"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
+    <div class="tome__page">
+      <h2 class="tome__title" id="keys-title">קיצורי מקלדת</h2>
+      <span class="tome__flourish" aria-hidden="true">❦</span>
+      <!-- ⚠️ הרשימה נבנית ב-script.js מתוך SHORTCUTS, שהוא אותו מקור
+           שממנו נגזר גם מטפל המקשים. רשימה שנכתבת כאן ביד מתיישנת
+           בפעם הראשונה שמשנים קיצור, ותיעוד ששקר גרוע מכלום. -->
+      <dl class="keys" data-keys-list></dl>
+    </div>
+  </div>
+</div>
+
 <div id="about-layer" class="overlay" hidden>
   <div class="overlay__backdrop" data-close-layer></div>
 
@@ -263,6 +280,7 @@
         </svg>
       </button>
       <button type="button" class="btn btn--brass btn--icon" data-act="mode" title="מעבר לתצוגת גלילה" aria-label="החלפת תצוגה"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-scroll" data-mode-icon/></svg></button>
+      <button type="button" class="btn btn--brass btn--icon" data-act="keys" title="קיצורי מקלדת" aria-label="קיצורי מקלדת" aria-haspopup="dialog"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-keys"/></svg></button>
       <button type="button" class="btn btn--brass btn--icon" data-act="fullscreen" title="מסך מלא" aria-label="מסך מלא"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-expand"/></svg></button>
     </div>
   </div>
@@ -317,7 +335,11 @@
       <span class="notepad__count" data-notepad-count></span>
     </footer>
     <p class="notepad__export">
-      <button type="button" class="btn btn--brass notepad__exportbtn" data-act="notes-export">
+      <!-- ⚠️ btn--wood ולא btn--brass. btn--brass שקוף למחצה ונועד לעץ
+           הכהה של הסרגל; על הנייר הבהיר של הפנקס הרקע מבצבץ מבעדו
+           והטקסט נבלע — 1.19:1 שנמדדו. btn--wood אטום, ולכן אינו תלוי
+           במשטח שמתחתיו ועובד גם במצב חשוך. -->
+      <button type="button" class="btn btn--wood notepad__exportbtn" data-act="notes-export">
         <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-word"/></svg>
         <span class="btn__label">ייצוא ל-Word</span>
       </button>
@@ -374,6 +396,11 @@
 <!-- ⚠️ ?v= קיים כדי לעקוף עותק ישן ששמור אצל משתמש. הנכונות עצמה
      נשענת על Cache-Control ב-_headers, ולכן אין חובה לעדכן אותו בכל
      שינוי — רק כשצריך לשבור מטמון תקוע. -->
-<script src="script.js?v=6" defer></script>
+<script src="script.js?v=7" defer></script>
+
+<!-- Google Analytics. ⚠️ הקוד המוטבע שגוגל מספקת נמצא ב-assets/analytics.js
+     ולא כאן: ל-script-src אין 'unsafe-inline', ובלוק מוטבע היה נחסם בשקט. -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-PNNQZ1Y4MP"></script>
+<script src="assets/analytics.js?v=1" defer></script>
 </body>
 </html>

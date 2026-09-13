@@ -62,6 +62,18 @@
   --shelf-wood:    var(--wood-light);
   --shelf-wood-dk: var(--wood-dark);
 
+  /* ⚠️ שני טוקנים ייעודיים לטקסט בלבד.
+     --brass ו---burgundy משמשים גם למסגרות, לפסי גלילה ולשדרות, ושם
+     הגוון הכהה תקין. כטקסט הם נכשלו במדידה: burgundy על נייר במצב
+     חשוך נתן 1.16:1, ו---brass על עץ נתן 3.01:1. הפרדה במקום להבהיר
+     את הטוקן הכללי ולשנות גם את מה שלא צריך. */
+  --brass-text:  #E3C88A;   /* טקסט על עץ כהה */
+  --accent-text: var(--burgundy);
+
+  /* רקע שדות קלט. חייב להיגזר מהערכה: טקסט הקלט הוא var(--ink),
+     והוא מתהפך עם המנורה בעוד רקע קשיח נשאר במקומו. */
+  --input-bg:  rgba(255,255,255,.55);
+
   /* פסי גלילה */
   --sb-track:  rgba(46,31,22,.12);
   --sb-edge:   rgba(46,31,22,.18);
@@ -110,6 +122,9 @@
   --bg:         #17100A;
   --shelf-wood:    #4A2A18;
   --shelf-wood-dk: #1E110A;
+  --brass-text:  #C9AE76;
+  --accent-text: #E09AA6;
+  --input-bg:  rgba(0,0,0,.34);
   --sb-track:  rgba(232,206,143,.10);
   --sb-edge:   rgba(232,206,143,.16);
   color-scheme: dark;
@@ -312,7 +327,9 @@ ul { margin: 0; padding: 0; list-style: none; }
   font-weight: 900;
   letter-spacing: .012em;
   margin: 0;
-  background: linear-gradient(180deg, #F2DFA8 0%, var(--brass) 45%, #6E5228 100%);
+  /* ⚠️ הקצה הכהה היה #6E5228 — 2.14:1 על העץ, מתחת ל-3.0 הנדרש לטקסט
+     גדול. הגרדיאנט נשמר, רק התחתית הובהרה (4.15:1 / 5.15:1). */
+  background: linear-gradient(180deg, #F2DFA8 0%, var(--brass) 45%, #A07F45 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -324,8 +341,9 @@ ul { margin: 0; padding: 0; list-style: none; }
   font-family: var(--font-ui);
   font-size: clamp(.7rem, 1.5vw, .85rem);
   letter-spacing: .28em;
-  color: #C8AE79;
-  opacity: .85;
+  /* היה #C8AE79 ב-opacity .85 — 4.47:1, ממש מתחת לסף. השקיפות ירדה
+     כי היא מורידה את הניגודיות בדיוק במקום שבו הוא כבר גבולי. */
+  color: #D9C08E;
 }
 
 .masthead__tools { display: flex; gap: .6rem; flex-wrap: wrap; }
@@ -436,7 +454,10 @@ ul { margin: 0; padding: 0; list-style: none; }
   max-inline-size: 100%;
   overflow: hidden;
   text-shadow: 0 1px 1px rgba(0,0,0,.75), 0 -1px 0 rgba(255,255,255,.22);
-  background: linear-gradient(180deg, #F4E2AE, var(--brass) 60%, #8A6A3B);
+  /* ⚠️ הקצה הכהה היה #8A6A3B — 2.24:1 עד 2.49:1 מול ארבע השדרות, וזה
+     טקסט קטן (15px) שדורש 4.5:1. #C8A265 נותן 4.70 עד 5.21 בכולן.
+     נמדד מול כל ארבעת צבעי השדרות שבקטלוג, לא מול אחד. */
+  background: linear-gradient(180deg, #F4E2AE, var(--brass) 60%, #C8A265);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -653,7 +674,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .index-card__label {
   font-family: var(--font-ui);
   font-size: .72rem; letter-spacing: .16em;
-  color: var(--burgundy);
+  color: var(--accent-text);
   margin: 1.3rem 0 .6rem;
   padding-block-end: .3rem;
   border-block-end: 1px solid rgba(110,29,43,.25);
@@ -749,7 +770,7 @@ ul { margin: 0; padding: 0; list-style: none; }
   text-align: center;
   font-size: 1.12em;
   font-weight: 500;
-  color: var(--burgundy);
+  color: var(--accent-text);
   margin-block-end: 1.3em;
 }
 
@@ -827,7 +848,9 @@ ul { margin: 0; padding: 0; list-style: none; }
   padding: 0;
 }
 .pagebox__input:focus { outline: none; color: #fff; }
-.pagebox__sep, .pagebox__total { opacity: .7; }
+/* ⚠️ הסרגל הוא עץ כהה בשתי הערכות, אבל הצבע כאן נגזר מ---paper
+   שמתהפך עם המנורה — ובמצב חשוך התקבל כהה על כהה, 1.16:1. */
+.pagebox__sep, .pagebox__total { color: var(--brass-lt); opacity: .82; }
 
 /* --- הבמה --- */
 /* ---------- פסי גלילה בעיצוב האתר ---------- */
@@ -1142,7 +1165,7 @@ html::-webkit-scrollbar-corner,
   border-block-end: 2px solid rgba(110,29,43,.3);
 }
 
-.notepad__title { font-size: 1.1rem; color: var(--burgundy); }
+.notepad__title { font-size: 1.1rem; color: var(--accent-text); }
 
 .notepad__close {
   inline-size: 30px; block-size: 30px;
@@ -1183,8 +1206,8 @@ html::-webkit-scrollbar-corner,
   padding-block-start: .6rem;
   border-block-start: 1px dashed rgba(110,80,40,.35);
 }
-.notepad__status.is-saving { color: var(--burgundy); }
-.notepad__count.is-warn { color: var(--burgundy); font-weight: 700; }
+.notepad__status.is-saving { color: var(--accent-text); }
+.notepad__count.is-warn { color: var(--accent-text); font-weight: 700; }
 
 /* --- סימניית בד: סרט אדום שיורד מראש העמוד --- */
 .bookmark-ribbon {
@@ -1316,7 +1339,7 @@ html::-webkit-scrollbar-corner,
   padding: clamp(1.6rem, 4vw, 2.6rem) 1rem clamp(2rem, 5vw, 3rem);
   text-align: center;
   background: linear-gradient(180deg, var(--wood-dark), #22120A);
-  color: var(--brass);
+  color: var(--brass-text);
   font-family: var(--font-display);
   font-size: clamp(.9rem, 1.6vw, 1.05rem);
   box-shadow: inset 0 12px 22px rgba(0,0,0,.5);
@@ -1415,7 +1438,7 @@ html::-webkit-scrollbar-corner,
 .lamp__label {
   font-family: var(--font-ui);
   font-size: .6rem; letter-spacing: .18em;
-  color: var(--brass);
+  color: var(--brass-text);
   white-space: nowrap;
 }
 
@@ -1512,6 +1535,9 @@ html::-webkit-scrollbar-corner,
   z-index: 9;
   inline-size: min(420px, 92vw);
   display: flex; flex-direction: column;
+  /* ⚠️ אסור להוסיף כאן overflow: hidden. הקיצור מאפס גם את overflow-y,
+     והפאנל מפסיק להיגלל באצבע ובגלגלת — בעוד scrollTop מתוך קוד ממשיך
+     לעבוד, כך שבדיקה תוכניתית תעבור בזמן שהמשתמש תקוע. */
   overflow-y: auto; overscroll-behavior: contain;
   padding: 1rem clamp(.9rem, 2vw, 1.3rem);
   /* הערך האחרון בתוכן העניינים נגע בקצה המסך ובמכשירים עם מחוון בית
@@ -1524,7 +1550,6 @@ html::-webkit-scrollbar-corner,
     radial-gradient(ellipse at 90% 94%, rgba(140,100,50,.16), transparent 45%);
   box-shadow: 14px 0 32px rgba(0,0,0,.5), inset -3px 0 0 rgba(120,85,40,.3);
   animation: slide-in .26s cubic-bezier(.2,.9,.3,1.05) both;
-  overflow: hidden;
 }
 
 .finder__form { margin-block: .75rem .5rem; }
@@ -1533,7 +1558,9 @@ html::-webkit-scrollbar-corner,
   padding: .6rem .8rem;
   font: inherit; font-size: .95rem;
   color: var(--ink);
-  background: rgba(255,255,255,.55);
+  /* ⚠️ היה rgba(255,255,255,.55) קשיח. הצבע של הטקסט מתהפך עם הערכה
+     והרקע לא, ולכן במצב חשוך התקבל קרם על רקע בהיר — כ-1.95:1. */
+  background: var(--input-bg);
   border: 1px solid rgba(120,85,40,.35);
   border-radius: 6px;
 }
@@ -1548,7 +1575,7 @@ html::-webkit-scrollbar-corner,
 }
 
 .finder__subtitle {
-  font-size: .85rem; color: var(--burgundy);
+  font-size: .85rem; color: var(--accent-text);
   margin-block: .6rem .4rem;
   padding-block-end: .3rem;
   border-block-end: 1px solid rgba(110,29,43,.22);
@@ -1574,7 +1601,7 @@ html::-webkit-scrollbar-corner,
 .finder__hitbtn:hover, .finder__hitbtn:focus-visible { background: rgba(120,85,40,.1); }
 .finder__page {
   font-family: var(--font-ui); font-size: .7rem;
-  color: var(--burgundy); white-space: nowrap;
+  color: var(--accent-text); white-space: nowrap;
 }
 .finder__snip {
   font-size: .82rem; color: var(--ink-soft); line-height: 1.5;
@@ -1609,6 +1636,68 @@ html::-webkit-scrollbar-corner,
   background: rgba(120,85,40,.18);
 }
 
+/* ---------- קריאת לילה: עמעום הדף עצמו ---------- */
+/* כיבוי המנורה החשיך את הממשק אבל הדף נשאר לבן מסנוור, וזה בדיוק
+   המשטח שמסתכלים עליו. הגוון החמים משלים את מטאפורת המנורה.
+
+   ⚠️ המסנן מוחל על ה-canvas ולא על .leaf או .leaf-inner. filter יוצר
+   containing block חדש ושובר transform-style: preserve-3d — כלומר היה
+   הורס את אנימציית הדפדוף של StPageFlip, שמסובבת את העלה במרחב.
+   ה-canvas הוא עלה סופי בעץ ואינו נושא טרנספורם משלו, ולכן בטוח.
+
+   ⚠️ הרקע הלבן של .leaf/.leaf-inner מעומעם בנפרד: הוא נראה בשוליים
+   שסביב הקנבס, ובלעדיו נשארת מסגרת לבנה בוהקת סביב דף כהה. */
+:root[data-theme="dark"] .leaf-canvas {
+  filter: brightness(.80) sepia(.16) contrast(1.04);
+}
+:root[data-theme="dark"] .leaf,
+:root[data-theme="dark"] .leaf-inner { background-color: #CDBEA4; }
+
+/* ⚠️ ההדגשה מצוירת *מעל* הקנבס ולכן אינה עוברת את המסנן. על דף מעומעם
+   הענבר הבהיר הפך בוהק מדי — כאן הוא מותאם חזרה. */
+:root[data-theme="dark"] .leaf-hl {
+  background: rgba(198,140,28,.40);
+  box-shadow: 0 0 0 1px rgba(120,76,6,.5), 0 1px 4px rgba(60,38,4,.3);
+}
+
+@media (prefers-contrast: more) {
+  :root[data-theme="dark"] .leaf-canvas { filter: none; }
+  :root[data-theme="dark"] .leaf,
+  :root[data-theme="dark"] .leaf-inner { background-color: #fff; }
+}
+
+/* ---------- חלונית קיצורי המקלדת ---------- */
+.tome--keys { max-inline-size: 34rem; }
+.keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .55rem 1rem;
+  align-items: baseline;
+  margin: 0;
+}
+.keys dt { margin: 0; white-space: nowrap; }
+.keys dd {
+  margin: 0;
+  font-family: var(--font-body); font-size: .95rem; line-height: 1.5;
+  color: var(--ink);
+}
+.keys dd small {
+  display: block;
+  font-size: .78rem; color: var(--ink-soft);
+}
+.keys kbd {
+  display: inline-block;
+  font-family: var(--font-ui); font-size: .76rem; line-height: 1.6;
+  min-inline-size: 1.9em; text-align: center;
+  padding: .1em .5em;
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--paper), var(--paper-deep));
+  border: 1px solid var(--paper-edge);
+  border-block-end-width: 2px;
+  border-radius: 4px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.14);
+}
+
 /* ---------- תוכן העניינים ---------- */
 /* ⚠️ הרשימה כאן אינה flex:1 כמו finder__list: תוכן העניינים הוא החלק
    הארוך בפאנל, ואם גם הוא וגם הסימניות נלחמים על הגובה, שניהם מקבלים
@@ -1633,7 +1722,7 @@ html::-webkit-scrollbar-corner,
 .toc__page {
   flex: 0 0 auto;
   font-family: var(--font-ui); font-size: .68rem;
-  color: var(--burgundy); opacity: .8;
+  color: var(--accent-text); opacity: .8;
 }
 
 /* הרמה העליונה היא רשימת הפרקים, ולכן היא בולטת יותר מהסעיפים שתחתיה */
@@ -1730,7 +1819,10 @@ html::-webkit-scrollbar-corner,
   .pagebox__input { inline-size: 2.8em; }
 
   /* בנייד מסתירים כלים שאין להם משמעות במסך קטן */
-  .btn[data-act="print"], .btn[data-act="fullscreen"] { display: none; }
+  /* קיצורי מקלדת חסרי משמעות במסך מגע. החלונית עצמה נשארת נגישה
+     למי שמחבר מקלדת חיצונית, רק הלחצן יורד מהסרגל. */
+  .btn[data-act="print"], .btn[data-act="fullscreen"],
+  .btn[data-act="keys"] { display: none; }
 
   /* ⚠️ הפנקס כיסה גם את הסרגל (inset-block-start: 0), ולכן בנייד לא
      היה אפשר לעבור ממנו לחיפוש בלי לסגור אותו קודם. עכשיו הוא נפתח

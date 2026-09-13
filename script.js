@@ -624,7 +624,10 @@ const Layers = {
   stack: [],
 
   open(layerEl, { labelledBy } = {}) {
-    if (this.stack.includes(layerEl)) return;
+    // ⚠️ המחסנית מחזיקה {el, restoreTo}, ולכן includes(layerEl) על
+    // האלמנט עצמו תמיד החזיר false והמשמר מעולם לא פעל: אפשר היה לדחוף
+    // שכבה פעמיים ולהשאיר מסגרת תקועה שמנעילה את הרקע ב-inert.
+    if (this.stack.some((f) => f.el === layerEl)) return;
     this.stack.push({ el: layerEl, restoreTo: document.activeElement });
     layerEl.hidden = false;
 
@@ -768,7 +771,13 @@ function whenPdfjsReady() {
     window.addEventListener('pdfjs-ready', settle, { once: true });
     setTimeout(() => {
       if (window.pdfjsLib) settle();
-      else reject(Object.assign(new Error('pdfjs-missing'), { code: 'pdfjs-missing' }));
+      else {
+        // ⚠️ לשחרר את ההבטחה שנדחתה. היא ממוזערת, ולכן ספרייה שסיימה
+        // להיטען בשנייה ה-16 נתקלה לנצח באותה דחייה שמורה — כל ניסיון
+        // לפתוח ספר נכשל עד רענון מלא של הדף.
+        _pdfjsWait = null;
+        reject(Object.assign(new Error('pdfjs-missing'), { code: 'pdfjs-missing' }));
+      }
     }, 15000);
   });
   return _pdfjsWait;
@@ -2177,6 +2186,7 @@ const Reader = {
       case 'zoom-out':    this.setZoom(this.zoom - 0.15); break;
       case 'mode':        this.toggleMode(); break;
       case 'fullscreen':  this.toggleFullscreen(); break;
+      case 'keys':        renderShortcuts(); Layers.open($('#keys-layer')); break;
     }
   },
 
@@ -2190,7 +2200,16 @@ const Reader = {
     if (page === this.currentPage()) {
       $('[data-act="bookmark"]').setAttribute('aria-pressed', String(on));
     }
-    Store.saveMarks(this.book.id, this.marks);
+    // ⚠️ Store.write מחזיר {ok, reason} ומטפל ב-quota, אבל התוצאה נזרקה:
+    // בזיכרון מלא הסרט הופיע, ההכרזה אמרה "נוספה סימנייה", ושום דבר לא
+    // נשמר. עכשיו הכישלון מגיע למשתמש.
+    const res = Store.saveMarks(this.book.id, this.marks);
+    if (res && res.ok === false) {
+      const why = res.reason === 'quota' ? 'אין מקום בדפדפן' : 'השמירה אינה זמינה';
+      toast(`הסימנייה לא נשמרה — ${why}`);
+      announce(`הסימנייה לא נשמרה — ${why}`);
+      return;
+    }
     announce(on ? `נוספה סימנייה בעמוד ${page}` : `הוסרה הסימנייה מעמוד ${page}`);
   },
 
@@ -2702,6 +2721,12 @@ const Router = {
         if (Reader.currentPage() !== next.page) Reader.goTo(next.page);
         return;
       }
+      // ⚠️ קורא→קורא בין שני ספרים שונים. השורה למעלה סוגרת את הקורא
+      // רק כשיוצאים ממנו, ולכן המעבר הזה — שמגיעים אליו עם כפתור
+      // "אחורה" של הדפדפן — נפל ישר ל-open(): flushNotes לא רץ ועד חמש
+      // שניות של כתיבה נמחקו, #notepad-text נדרס בהערות הספר החדש,
+      // וה-PDF הישן לא שוחרר.
+      if (prev.name === 'reader') Reader.close();
       Card.hide();
       await Reader.open(next.book, next.page);
     }
@@ -2723,7 +2748,16 @@ function initKeyboard() {
       // כל לחיצה מקלפת שכבה אחת בדיוק
       if (typing && t.matches('textarea')) { t.blur(); return; }
       if (typing && t.matches('input')) { t.blur(); return; }
-      if (Layers.topEl) { e.preventDefault(); Layers.closeTop(); Router.back('#/'); return; }
+      // ⚠️ Router.back רק עבור כרטיס הקטלוג, כמו בנתיב הלחיצה למטה.
+      // קודם הוא רץ על *כל* שכבה, ולכן סגירת חלונית שנפתחה מתוך הקורא
+      // הייתה גם זורקת את הקורא חזרה למדף.
+      if (Layers.topEl) {
+        e.preventDefault();
+        const wasCard = Layers.topEl.id === 'card-layer';
+        Layers.closeTop();
+        if (wasCard) Router.back('#/');
+        return;
+      }
       if (!$('#finder').hidden) { e.preventDefault(); Reader.toggleFind(false); return; }
       if (!$('#notepad').hidden) { e.preventDefault(); Reader.toggleNotes(false); return; }
       if (Router.current.name === 'reader') {
@@ -2736,30 +2770,68 @@ function initKeyboard() {
     if (typing) return;
     if (Router.current.name !== 'reader' || !Reader.view) return;
 
-    switch (e.key) {
-      // ⚠️ בעברית העמוד הבא נמצא משמאל. חץ שמאלה = קדימה.
-      // ⚠️ החץ השמאלי מקדם, בהתאם למיקום לחצן "הבא" בצד שמאל.
-      case 'ArrowLeft':
-      case 'PageDown':
-        e.preventDefault(); Reader.view.advance(); break;
-      case 'ArrowRight':
-      case 'PageUp':
-        e.preventDefault(); Reader.view.retreat(); break;
-      case ' ':
-        e.preventDefault();
-        e.shiftKey ? Reader.view.retreat() : Reader.view.advance(); break;
-      case 'Home':
-        e.preventDefault(); Reader.goTo(1); break;
-      case 'End':
-        e.preventDefault(); Reader.goTo(Reader.source?.numPages || 1); break;
-      case 'b': case 'B': case 'ב':      // גם פריסת מקלדת עברית
-        e.preventDefault(); Reader.toggleBookmark(Reader.currentPage()); break;
-      case 'n': case 'N': case 'מ':
-        e.preventDefault(); Reader.toggleNotes(); break;
-      case 'f': case 'F': case 'ח':      // גם פריסת מקלדת עברית
-        e.preventDefault(); Reader.toggleFind(); break;
+    // מונע מהטבלה ומהחלונית להיפרד זו מזו — ראו SHORTCUTS
+    for (const sc of SHORTCUTS) {
+      if (sc.run && sc.keys.includes(e.key)) { e.preventDefault(); sc.run(e); return; }
     }
   });
+}
+
+/* ============================================================================
+ * §11ב — קיצורי מקלדת
+ * ==========================================================================
+ * ⚠️ מקור אמת יחיד. הטבלה הזו היא גם טבלת השיגור של מטפל המקשים וגם
+ * מה שמוצג בחלונית — ולכן חלונית שמראה קיצור שלא עובד היא בלתי אפשרית.
+ * הפיתוי לכתוב את הרשימה ב-HTML גדול, והמחיר הוא תיעוד שמשקר בפעם
+ * הראשונה שמשנים מקש.
+ *
+ *  keys  — מה שמגיע ב-e.key. אותיות מופיעות בשתי פריסות המקלדת.
+ *  show  — מה שמוצג למשתמש.
+ *  run   — null פירושו "מטופל במקום אחר"; Esc נתפס מוקדם יותר, לפני
+ *          המשמר שמוודא שאנחנו בכלל בתוך קורא.
+ * ========================================================================== */
+
+const SHORTCUTS = [
+  // ⚠️ בעברית העמוד הבא נמצא משמאל, ולכן חץ שמאלה מקדם — בהתאם למיקום
+  // לחצן "הבא" בצד שמאל של הסרגל.
+  { keys: ['ArrowLeft', 'PageDown'], show: ['←', 'PageDown'], label: 'עמוד קדימה',
+    hint: 'בעברית קדימה הוא שמאלה', run: () => Reader.view.advance() },
+  { keys: ['ArrowRight', 'PageUp'], show: ['→', 'PageUp'], label: 'עמוד אחורה',
+    run: () => Reader.view.retreat() },
+  { keys: [' '], show: ['רווח', 'Shift+רווח'], label: 'קדימה · אחורה',
+    run: (e) => (e.shiftKey ? Reader.view.retreat() : Reader.view.advance()) },
+  { keys: ['Home'], show: ['Home'], label: 'לעמוד הראשון',
+    run: () => Reader.goTo(1) },
+  { keys: ['End'], show: ['End'], label: 'לעמוד האחרון',
+    run: () => Reader.goTo(Reader.source?.numPages || 1) },
+  { keys: ['b', 'B', 'ב'], show: ['ב', 'B'], label: 'סימנייה',
+    run: () => Reader.toggleBookmark(Reader.currentPage()) },
+  { keys: ['n', 'N', 'מ'], show: ['מ', 'N'], label: 'פנקס המלומד',
+    run: () => Reader.toggleNotes() },
+  { keys: ['f', 'F', 'ח'], show: ['ח', 'F'], label: 'חיפוש, תוכן וסימניות',
+    run: () => Reader.toggleFind() },
+  { keys: [], show: ['Esc'], label: 'סגירת שכבה אחת', run: null },
+];
+
+/** מצייר את הרשימה בחלונית מתוך SHORTCUTS. */
+function renderShortcuts() {
+  const host = $('[data-keys-list]');
+  if (!host || host.childElementCount) return;   // נבנית פעם אחת
+  const frag = document.createDocumentFragment();
+  for (const sc of SHORTCUTS) {
+    const dt = document.createElement('dt');
+    sc.show.forEach((k, i) => {
+      if (i) dt.append(document.createTextNode(' · '));
+      dt.append(Object.assign(document.createElement('kbd'), { textContent: k }));
+    });
+    const dd = document.createElement('dd');
+    dd.append(document.createTextNode(sc.label));
+    if (sc.hint) {
+      dd.append(Object.assign(document.createElement('small'), { textContent: sc.hint }));
+    }
+    frag.append(dt, dd);
+  }
+  host.append(frag);
 }
 
 /* ============================================================================
