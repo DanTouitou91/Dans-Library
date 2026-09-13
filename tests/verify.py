@@ -120,6 +120,28 @@ with sync_playwright() as pw:
     page.mouse.move(8, 8); page.wait_for_timeout(400)
     check("יציאה מהשדרה מכבה את התווית", page.evaluate(tip_state) is None)
 
+    # ⚠️ הרגרסיה: כשהספר נשלף מהמדף הוא זז מתחת לעכבר הנייח, וזה מייצר
+    # pointerenter נוסף — גם אחרי שהמדף כבר הוחלף בקורא. התווית נדלקה
+    # מחדש, מדדה שדרה שכבר אינה מצוירת (‎#shelf-view מוסתר, אך האלמנטים
+    # עדיין isConnected ולכן מחזירים מלבן אפס) ונתקעה בפינה השמאלית
+    # העליונה מעל הסרגל. ⚠️ העכבר חייב להישאר במקומו לכל אורך המסלול —
+    # הזזתו מסתירה את הבאג.
+    sp = browser.new_page(viewport={"width": 1440, "height": 900})
+    sp.goto(BASE + "/", wait_until="networkidle")
+    sp.wait_for_timeout(800)
+    sb2 = sp.locator(".book").nth(1).bounding_box()
+    sp.mouse.move(sb2["x"] + sb2["width"] / 2, sb2["y"] + sb2["height"] / 2)
+    sp.wait_for_timeout(400)
+    sp.mouse.down(); sp.mouse.up()
+    sp.wait_for_timeout(2000)
+    sp.locator('#card-layer .btn--wood, #card-layer [data-act], '
+               '.index-card a, .index-card button').first.click()
+    sp.wait_for_timeout(8000)
+    stuck = sp.evaluate(tip_state)
+    check("התווית אינה נתקעת מעל הקורא אחרי כניסה לספר",
+          stuck is None, f"{stuck}")
+    sp.close()
+
     tp = browser.new_page(viewport={"width": 390, "height": 780}, has_touch=True, is_mobile=True)
     tp.goto(BASE + "/", wait_until="networkidle"); tp.wait_for_timeout(700)
     tb = tp.locator(".book").nth(0).bounding_box()

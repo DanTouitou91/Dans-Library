@@ -497,6 +497,13 @@ const Shelf = {
   },
 
   showTip(spineEl, book) {
+    // ⚠️ שדרה שאינה מצוירת אינה מקבלת תווית.
+    // כשהספר נשלף מהמדף הוא זז מתחת לעכבר הנייח, וזה מייצר pointerenter
+    // נוסף — גם *אחרי* שהמדף כבר הוחלף בקורא. התווית נדלקה מחדש, מדדה
+    // מלבן אפס (‎#shelf-view מוסתר, אבל האלמנטים עדיין isConnected),
+    // ונתקעה בפינה השמאלית העליונה מעל הסרגל.
+    // בדיקת גודל ולא isConnected: זו היחידה שתופסת גם תת-עץ מוסתר.
+    if (!this.isLive(spineEl)) return;
     const el = this.tipEl();
     clearTimeout(this._tipHideTimer);
     el.textContent = book.title;
@@ -519,6 +526,7 @@ const Shelf = {
     clearTimeout(this._tipSettle);
     const settle = () => {
       if (this._tipFor !== spineEl) return;      // העכבר כבר עבר לספר אחר
+      if (!this.isLive(spineEl)) { this.hideTip(); return; }
       this.placeTip(spineEl);
     };
     this._tipFor = spineEl;
@@ -527,10 +535,21 @@ const Shelf = {
     this._tipSettle = setTimeout(settle, 340);
   },
 
+  /**
+   * האם השדרה באמת מצוירת על המסך כרגע.
+   * ⚠️ isConnected אינו מספיק: כשהקורא נפתח ‎#shelf-view מקבל hidden,
+   * והשדרות נשארות מחוברות למסמך אבל מחזירות מלבן אפס.
+   */
+  isLive(spineEl) {
+    if (!spineEl?.isConnected) return false;
+    const r = spineEl.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  },
+
   /** ממקם את התווית מול השדרה. מופרד מ-showTip כדי שאפשר יהיה למקם שוב. */
   placeTip(spineEl) {
     const el = this._tip;
-    if (!el || el.hidden || !spineEl.isConnected) return;
+    if (!el || el.hidden || !this.isLive(spineEl)) return;
 
     const r = spineEl.getBoundingClientRect();
     const tw = el.offsetWidth;
