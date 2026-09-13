@@ -25,6 +25,22 @@
 /books/*
   Cache-Control: public, max-age=0, must-revalidate
 
-# ‎ה-HTML עצמו תמיד טרי, כדי ששינוי במערך הספרים יופיע מיד.
+# ‎⚠️ קוד האתר חייב כלל מפורש — לכל קובץ בנפרד.
+# ‎שתי טעויות היו כאן, ושתיהן גרמו למשתמש להריץ קוד ישן בלי לדעת:
+# ‎  1. ל-script.js ול-style.css לא היה שום כלל. בלי הנחיה מפורשת דפדפן
+# ‎     מחיל "מטמון היוריסטי" משלו — ספארי בנייד עושה זאת באגרסיביות —
+# ‎     וגרסאות חדשות פשוט לא הגיעו.
+# ‎  2. הכלל היה /index.html בלבד, אבל הכתובת שאליה נכנסים היא "/".
+# ‎     Netlify מתאימה לפי נתיב הבקשה, ולכן הכלל לא חל על דף הבית כלל.
+# ‎הנתיבים כאן מפורטים אחד-אחד בכוונה, כדי שלא ייווצר כפל עם /vendor/*
+# ‎(שהוא היחיד שנשמר לשנה, כי הוא נעול לגרסה ולעולם לא משתנה).
+/
+  Cache-Control: public, max-age=0, must-revalidate
 /index.html
+  Cache-Control: public, max-age=0, must-revalidate
+/script.js
+  Cache-Control: public, max-age=0, must-revalidate
+/style.css
+  Cache-Control: public, max-age=0, must-revalidate
+/assets/*
   Cache-Control: public, max-age=0, must-revalidate
