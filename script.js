@@ -88,6 +88,19 @@ const CATALOG = [
     note: 'מן היסוד אל היישום · האוניברסיטה הפתוחה · ספר לימוד מקיף לקראת הבחינה',
   },
   {
+    id: 'mediniyut-tziburit',
+    title: 'מדיניות ציבורית',
+    file: 'books/mediniyut-tziburit.pdf',
+    // המקורות נלקחו מתוך "על מה הספר מבוסס" שבספר עצמו.
+    sources: [
+      'גוף הידע המקובל בתחום המדיניות הציבורית',
+      'מושגים, מודלים ואסכולות של קורס מבואי בתחום',
+    ],
+    shelf: 'הקורסים שלי',
+    spine: { color: '#1C3A47', height: 0.97 },
+    note: 'מהדורה 2 · מהיסודות ועד ניתוח מדיניות — עיצוב, יישום והערכה',
+  },
+  {
     id: 'mavo-minhal-nihul-tziburi',
     title: 'מבוא למינהל ולניהול ציבורי',
     file: 'books/mavo-minhal-nihul-tziburi.pdf',
