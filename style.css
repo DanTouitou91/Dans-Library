@@ -768,9 +768,28 @@ ul { margin: 0; padding: 0; list-style: none; }
   align-items: center;
   justify-items: start;
   padding: clamp(.5rem, 2vw, 1.6rem);
-  overflow: auto;
   min-block-size: 0;   /* מאפשר לגריד להתכווץ בתוך flex */
+
+  /* ⚠️ ברירת המחדל היא ללא גלילה. הבמה הייתה overflow:auto תמיד, ובזמן
+     דפדוף הדף המסתובב חורג ממנה — נמדד עד 736px לרוחב ו-663px לגובה,
+     ב-17 מתוך 49 פריימים. התוצאה: פסי גלילה שהבזיקו למטה ובצד באמצע
+     האנימציה, והפריסה קפצה איתם. במנוחה אין מה לגלול בכלל, ולכן
+     הגלילה נפתחת רק כשבאמת צריך אותה — ראו syncPan(). */
+  overflow: hidden;
 }
+
+/* תצוגת גלילה: כאן הגלילה היא הקריאה עצמה, והפס הוא מחוון מיקום
+   לגיטימי ויציב — ולכן הוא נשאר. */
+.stage[data-pan="scroll"] { overflow: auto; }
+
+/* תצוגת ספר בזום: צריך לגרור כדי לראות את כל העמוד, אבל הפס עצמו עדיין
+   מהבהב בזמן דפדוף — אז הגלילה נשארת והפס מוסתר. */
+.stage[data-pan="zoom"] {
+  overflow: auto;
+  scrollbar-width: none;            /* Firefox */
+  -ms-overflow-style: none;
+}
+.stage[data-pan="zoom"]::-webkit-scrollbar { inline-size: 0; block-size: 0; }
 .stage:focus { outline: none; }
 
 /* מעטפת הזום: מוחלת על תצוגת הדפדוף */

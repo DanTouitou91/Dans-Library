@@ -1820,6 +1820,7 @@ const Reader = {
     this.applyBookmarksToView();
     this.onPageChange(page);
     this.updateModeButton();
+    this.syncPan();   // התצוגה השתנתה — ולכן גם הצורך בגלילה
   },
 
   tripFallback(reason) {
@@ -2065,6 +2066,20 @@ const Reader = {
     el.classList.toggle('is-warn', len > LIMIT * 0.9);
   },
 
+  /**
+   * קובע מתי הבמה גוללת בכלל.
+   * ⚠️ בתצוגת ספר ללא זום אין מה לגלול, ובכל זאת הייתה שם גלילה —
+   * והדף המסתובב, שחורג מהבמה באמצע האנימציה, גרם לפסי גלילה להבהב
+   * למטה ובצד. מכאן שהגלילה נפתחת רק בתצוגת גלילה או בזום.
+   */
+  syncPan() {
+    const st = $('#reader-stage');
+    if (!st) return;
+    if (this.mode === 'scroll') st.dataset.pan = 'scroll';
+    else if (this.zoom > 1) st.dataset.pan = 'zoom';
+    else delete st.dataset.pan;
+  },
+
   setZoom(z) {
     this.zoom = clamp(Number(z.toFixed(2)), 0.6, 2.5);
     // הזום נשמר. במסך של טלפון עמוד A4 מעוצב יוצא קטן, ודן היה צריך
@@ -2077,6 +2092,7 @@ const Reader = {
       const sc = $('.scroller');
       if (sc) sc.style.setProperty('--scroll-w', `${Math.round(820 * this.zoom)}px`);
     }
+    this.syncPan();
     // גם במצב ספר: בלי זה הזום רק מותח מפת פיקסלים קיימת ומטשטש אותה
     this.view?.onResize?.();
     announce(`תצוגה ${Math.round(this.zoom * 100)} אחוז`);
