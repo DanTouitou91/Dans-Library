@@ -470,6 +470,94 @@ const Shelf = {
     });
   },
 
+  /* --------------------------------------------------------------------------
+   * תווית שם הספר בריחוף
+   * ------------------------------------------------------------------------
+   * אלמנט יחיד משותף לכל השדרות, ולא תווית לכל ספר: כך אין 4 צמתים מיותרים
+   * ב-DOM, והתזמון (השהיה, ביטול, מעבר מספר לספר) נשאר במקום אחד.
+   *
+   * מסומן aria-hidden כי לשדרה כבר יש aria-label עם אותו שם — בלי זה קורא
+   * מסך היה מקריא את הכותרת פעמיים.
+   * ------------------------------------------------------------------------ */
+  TIP_DELAY: 1000,
+
+  tipEl() {
+    if (this._tip?.isConnected) return this._tip;
+    const el = document.createElement('div');
+    el.className = 'book-tip';
+    el.id = 'shelf-tip';
+    el.setAttribute('aria-hidden', 'true');
+    el.hidden = true;
+    document.body.append(el);
+    this._tip = el;
+    return el;
+  },
+
+  showTip(spineEl, book) {
+    const el = this.tipEl();
+    clearTimeout(this._tipHideTimer);
+    el.textContent = book.title;
+    el.hidden = false;
+    el.classList.remove('is-on');
+
+    // ⚠️ offsetWidth ולא getBoundingClientRect: התווית נכנסת עם
+    // scale(.97), ומלבן חוסם מחזיר את המידה **אחרי** הטרנספורם — כלומר
+    // רוחב קטן ב-3%, ומרכוז שמפספס. offsetWidth הוא ערך הפריסה.
+    // המדידה חייבת לקרות אחרי שהטקסט כבר בפנים, אחרת הרוחב שייך
+    // לכותרת הקודמת.
+    const r = spineEl.getBoundingClientRect();
+    const tw = el.offsetWidth;
+    const th = el.offsetHeight;
+    const gap = 10;
+    const margin = 8;
+
+    let left = r.left + r.width / 2 - tw / 2;
+    left = Math.min(Math.max(left, margin), innerWidth - tw - margin);
+
+    let top = r.top - th - gap;
+    let below = false;
+    if (top < margin) { top = r.bottom + gap; below = true; }
+
+    el.style.left = `${Math.round(left)}px`;
+    el.style.top = `${Math.round(top)}px`;
+    el.dataset.side = below ? 'below' : 'above';
+    // החץ עוקב אחרי מרכז השדרה גם כשהתווית נדחפה פנימה מקצה המסך
+    el.style.setProperty('--tip-arrow',
+      `${Math.round(Math.min(Math.max(r.left + r.width / 2 - left, 12), tw - 12))}px`);
+
+    requestAnimationFrame(() => el.classList.add('is-on'));
+  },
+
+  hideTip() {
+    clearTimeout(this._tipTimer);
+    const el = this._tip;
+    if (!el || el.hidden) return;
+    el.classList.remove('is-on');
+    // ההסתרה מחכה לדהייה, אבל רק אם לא הודלקה תווית אחרת בינתיים
+    this._tipHideTimer = setTimeout(() => {
+      if (!el.classList.contains('is-on')) el.hidden = true;
+    }, 160);
+  },
+
+  bindTip(spineEl, book) {
+    const arm = (delay) => {
+      clearTimeout(this._tipTimer);
+      this._tipTimer = setTimeout(() => this.showTip(spineEl, book), delay);
+    };
+
+    // pointerenter ולא mouseenter: בנייד הקשה מייצרת mouseenter מדומה,
+    // ותווית שנדלקת על מגע נשארת תקועה אחרי שהעמוד כבר התחלף.
+    spineEl.addEventListener('pointerenter', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      arm(this.TIP_DELAY);
+    });
+    spineEl.addEventListener('pointerleave', () => this.hideTip());
+    spineEl.addEventListener('pointerdown', () => this.hideTip());
+    // מקלדת: אין כאן כוונה לבדוק, ולכן אין סיבה להשהות
+    spineEl.addEventListener('focus', () => arm(0));
+    spineEl.addEventListener('blur', () => this.hideTip());
+  },
+
   buildSpine(book) {
     const state = Store.state(book.id);
     const el = document.createElement('button');
@@ -495,6 +583,7 @@ const Shelf = {
       el.append(ribbon);
     }
 
+    this.bindTip(el, book);
     el.addEventListener('click', () => this.pullOut(el, book));
     return el;
   },
@@ -768,6 +857,7 @@ class BookSource {
 
   static async open(book, onProgress) {
     const PDFJS = await whenPdfjsReady();
+    PDFJS_NS = PDFJS;      // נדרש ל-Util.transform בחישוב ההדגשות
 
     const task = PDFJS.getDocument({
       url: BookSource.urlFor(book),
@@ -842,6 +932,61 @@ class BookSource {
       return pages;
     })();
     return this._indexing;
+  }
+
+  /**
+   * מחשב היכן בדיוק על העמוד מופיע ביטוי החיפוש.
+   *
+   * העמוד מצויר כתמונה ואין לנו שכבת טקסט שאפשר לסמן בה, ולכן מחשבים
+   * את המלבנים מנתוני ה-PDF עצמו: לכל פריט טקסט יש מטריצת מיקום,
+   * ו-Util.transform ממפה אותה למרחב התצוגה.
+   *
+   * המלבנים מוחזרים ב**שברים של גודל העמוד** (0–1) ולא בפיקסלים, כדי
+   * שהסימון יישאר צמוד לטקסט בכל זום ובכל שינוי גודל חלון בלי לחשב מחדש.
+   */
+  async matchBoxes(pageNum, normalizedQuery) {
+    const q = normalizedQuery;
+    if (!q || q.length < 2) return [];
+    const page = await this.doc.getPage(pageNum);
+    try {
+      const vp = page.getViewport({ scale: 1 });
+      const tc = await page.getTextContent();
+
+      // בונים את מחרוזת העמוד מחלקים מנורמלים, ושומרים לכל פריט את
+      // הטווח שלו בתוכה — כך אפשר למפות התאמה חזרה לפריטים שמכסים אותה.
+      let text = '';
+      const spans = [];
+      for (const it of tc.items) {
+        const piece = Reader._normalize(it.str);
+        spans.push({ from: text.length, to: text.length + piece.length, it });
+        text += piece + ' ';
+      }
+
+      const boxes = [];
+      let at = 0;
+      while (boxes.length < 60) {
+        const hit = text.indexOf(q, at);
+        if (hit === -1) break;
+        const end = hit + q.length;
+        for (const sp of spans) {
+          if (sp.to <= hit || sp.from >= end) continue;      // אין חפיפה
+          const m = PDFJS_NS.Util.transform(vp.transform, sp.it.transform);
+          const h = Math.hypot(m[2], m[3]) || sp.it.height || 10;
+          const w = sp.it.width || 0;
+          if (!(w > 0) || !(h > 0)) continue;
+          boxes.push({
+            x: m[4] / vp.width,
+            y: (m[5] - h) / vp.height,
+            w: w / vp.width,
+            h: h / vp.height,
+          });
+        }
+        at = end;
+      }
+      return boxes;
+    } finally {
+      page.cleanup();
+    }
   }
 
   /**
@@ -1109,6 +1254,8 @@ class ScrollReader {
  *    · בכל כפולה, העמוד הימני הוא בעל המספר הנמוך
  *    · "קדימה" הוא flipNext — האנימציה הנכונה, מימין לשמאל
  * ========================================================================== */
+
+let PDFJS_NS = null;      // מאוכלס ב-BookSource.open
 
 const PageFlipCtor = window.St?.PageFlip || window.PageFlip || null;
 
@@ -1683,7 +1830,14 @@ const Reader = {
     // תוצאות חיפוש וסימניות — האזנה אחת במקום מאזין לכל שורה
     $('#finder').addEventListener('click', (e) => {
       const go = e.target.closest('[data-goto]');
-      if (go) { this.goTo(Number(go.dataset.goto)); return; }
+      if (go) {
+        // תוצאת חיפוש מדליקה גם את ההדגשה על הדף; סימנייה לא
+        this._highlightQuery = go.closest('[data-find-results]')
+          ? this._normalize($('#find-input').value).trim() : '';
+        this.goTo(Number(go.dataset.goto));
+        setTimeout(() => this.paintHighlights(), 260);
+        return;
+      }
       const un = e.target.closest('[data-unmark]');
       if (un) { this.toggleBookmark(Number(un.dataset.unmark)); this.renderMarksList(); }
     });
@@ -1884,6 +2038,7 @@ const Reader = {
   },
 
   onPageChange(page) {
+    if (this._highlightQuery) setTimeout(() => this.paintHighlights(), 220);
     $('#page-input').value = String(page);
     $('[data-act="bookmark"]').setAttribute('aria-pressed', String(this.marks.has(page)));
     announce(`עמוד ${page}`);
@@ -1932,6 +2087,55 @@ const Reader = {
 
   /* ---------- חיפוש וסימניות ---------- */
 
+  /**
+   * מצייר את ההדגשות על העמודים שמוצגים כרגע.
+   * ⚠️ לא מספיק להפנות לעמוד הנכון — בעמוד בן מאות מילים המשתמש עדיין
+   * צריך לסרוק בעיניים. הסימון מצויר *מעל* הקנבס, במיקומים שחושבו
+   * מנתוני ה-PDF (ראו BookSource.matchBoxes).
+   */
+  async paintHighlights() {
+    const q = this._highlightQuery;
+    // ⚠️ רק עלים שמוצגים בפועל. מעבר על כל העלים היה מפעיל חילוץ טקסט
+    // לכל עמוד בספר — 111 קריאות בספר הגדול — בשביל שניים שנראים.
+    const leaves = [...document.querySelectorAll('#reader-stage .leaf[data-page]')]
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 40 && r.height > 40 && getComputedStyle(el).display !== 'none';
+      });
+
+    for (const leaf of leaves) {
+      const inner = leaf.querySelector('.leaf-inner');
+      if (!inner) continue;
+      inner.querySelectorAll('.leaf-hl').forEach((el) => el.remove());
+      if (!q) continue;
+
+      const page = Number(leaf.dataset.page);
+      let boxes = [];
+      try { boxes = await this.source.matchBoxes(page, q); } catch { boxes = []; }
+      if (!boxes.length) continue;
+
+      const frag = document.createDocumentFragment();
+      for (const b of boxes) {
+        const el = document.createElement('div');
+        el.className = 'leaf-hl';
+        // באחוזים, ולכן נשאר צמוד לטקסט בכל זום ובכל שינוי גודל
+        el.style.insetInlineStart = 'auto';
+        el.style.left = `${(b.x * 100).toFixed(3)}%`;
+        el.style.top = `${(b.y * 100).toFixed(3)}%`;
+        el.style.width = `${(b.w * 100).toFixed(3)}%`;
+        el.style.height = `${(b.h * 100).toFixed(3)}%`;
+        frag.append(el);
+      }
+      inner.append(frag);
+    }
+  },
+
+  /** מנקה את ההדגשות מהעמודים. */
+  clearHighlights() {
+    this._highlightQuery = '';
+    document.querySelectorAll('#reader-stage .leaf-hl').forEach((el) => el.remove());
+  },
+
   toggleFind(force) {
     const el = $('#finder');
     const show = force != null ? force : el.hidden;
@@ -1959,6 +2163,7 @@ const Reader = {
     const marks = $('[data-find-marks]');
     const status = $('[data-find-status]');
 
+    if (this._highlightQuery && this._highlightQuery !== q) this.clearHighlights();
     if (q.length < 2) {                 // שאילתה קצרה מדי תחזיר הכול
       list.hidden = true; list.replaceChildren();
       marks.hidden = false;
@@ -2153,6 +2358,7 @@ const Reader = {
     $('#notepad').hidden = true;
     $('#finder').hidden = true;
     $('#find-input').value = '';
+    this.clearHighlights();
     $('#reader-view').hidden = true;
     $('#shelf-view').hidden = false;
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
@@ -2306,6 +2512,11 @@ function init() {
   Shelf.render();
   Reader.init();
   initKeyboard();
+
+  // התווית ממוקמת בקואורדינטות חלון, ולכן כל גלילה או שינוי מסלול
+  // היו משאירים אותה תלויה באוויר מול השדרה הלא נכונה
+  addEventListener('scroll', () => Shelf.hideTip(), { passive: true, capture: true });
+  addEventListener('hashchange', () => Shelf.hideTip());
 
   // סגירת שכבות בלחיצה על הרקע / כפתורי סגירה
   document.addEventListener('click', (e) => {

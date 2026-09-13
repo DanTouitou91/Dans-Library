@@ -469,6 +469,66 @@ ul { margin: 0; padding: 0; list-style: none; }
   pointer-events: none;
 }
 
+/* --------------------------------------------------------------------------
+ * תווית שם הספר בריחוף
+ * ------------------------------------------------------------------------
+ * position: fixed ולא absolute — השדרה נמצאת בתוך שורה שעשויה לגלול, ותווית
+ * שמתמקמת יחסית אליה הייתה נחתכת. המיקום מחושב ב-JS, ולכן אין כאן inset-inline.
+ * ------------------------------------------------------------------------ */
+.book-tip {
+  position: fixed;
+  z-index: 60;
+  max-inline-size: min(19rem, 80vw);
+  padding: .42rem .78rem;
+  border: 1px solid var(--brass-dk);
+  border-radius: 7px;
+  background: linear-gradient(180deg, var(--paper), var(--paper-deep));
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: .94rem;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.5),
+    0 6px 18px rgba(0,0,0,.42);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px) scale(.97);
+  transition: opacity .16s ease, transform .16s cubic-bezier(.22,.9,.3,1.1);
+}
+.book-tip[data-side="below"] { transform: translateY(-4px) scale(.97); }
+.book-tip.is-on { opacity: 1; transform: translateY(0) scale(1); }
+
+/* חוד הנייר. שתי שכבות: אחת בצבע המסגרת ואחת בצבע הרקע מעליה, כדי
+   שהקו הדק של המסגרת יימשך גם סביב החוד. */
+/* ⚠️ left ולא inset-inline-start: --tip-arrow מחושב ב-JS כמרחק מהקצה
+   הפיזי השמאלי (r.left פחות left של התווית). ב-RTL הקצה ההתחלתי הוא
+   הימני, ולכן מאפיין לוגי כאן היה ממקם את החוד במראה. במקרה הממורכז
+   שני החישובים נותנים אותו פיקסל, ולכן הבאג היה מתגלה רק כשהתווית
+   נדחפת פנימה מקצה המסך. */
+.book-tip::before,
+.book-tip::after {
+  content: '';
+  position: absolute;
+  left: var(--tip-arrow, 50%);
+  inline-size: 9px; block-size: 9px;
+  margin-left: -5px;
+  background: var(--paper-deep);
+  border: 1px solid var(--brass-dk);
+  transform: rotate(45deg);
+}
+.book-tip::before { inset-block-end: -5px; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+.book-tip::after  { inset-block-start: -5px; clip-path: polygon(0 0, 100% 0, 0 100%);
+                    background: var(--paper); }
+.book-tip[data-side="above"]::after  { display: none; }
+.book-tip[data-side="below"]::before { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .book-tip { transition: opacity .12s linear; transform: none; }
+  .book-tip[data-side="below"] { transform: none; }
+}
+
 /* מדף ריק */
 .shelf__empty {
   flex: 1;
@@ -990,6 +1050,34 @@ html::-webkit-scrollbar-corner,
   right: 0;
   background: linear-gradient(to left,
     rgba(20,13,5,.20), transparent 100%);
+}
+
+/* ---------- הדגשת תוצאות חיפוש על הדף ---------- */
+/* ⚠️ המיקום נקבע באחוזים מתוך גודל העלה (ראו matchBoxes), ולכן הסימון
+   נשאר צמוד לטקסט בכל זום ובכל שינוי גודל בלי חישוב מחדש.
+   ⚠️ left/top פיזיים בכוונה: אלה קואורדינטות מתוך ה-PDF, לא פריסת
+   ממשק, ואסור שיתהפכו ב-RTL.
+   multiply שומר על קריאוּת האותיות מתחת לסימון. */
+.leaf-hl {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 2px;
+  background: rgba(224,168,54,.42);
+  box-shadow: 0 0 0 1px rgba(150,96,12,.45), 0 1px 4px rgba(90,60,10,.25);
+  mix-blend-mode: multiply;
+  animation: hl-pop .45s ease-out both;
+}
+
+/* פעימה קצרה בהופעה, כדי שהעין תימשך לשם מיד */
+@keyframes hl-pop {
+  0%   { transform: scale(1.35); opacity: 0; }
+  55%  { transform: scale(1);    opacity: 1; }
+  70%  { box-shadow: 0 0 0 4px rgba(224,168,54,.35), 0 0 0 1px rgba(150,96,12,.45); }
+  100% { box-shadow: 0 0 0 1px rgba(150,96,12,.45), 0 1px 4px rgba(90,60,10,.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .leaf-hl { animation: none; }
 }
 
 /* עמוד בגודל חריג — מסגרת עדינה שמסבירה את הלטרבוקס */
