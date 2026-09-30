@@ -199,6 +199,15 @@ with sync_playwright() as pw:
     check("about closing line", about.strip().endswith("למידה מהנה!"))
     check("about paragraph count", len(page.locator("#about-layer .tome__text p").all()) == 6)
     check("about mentions the video collection", "אוסף קלטות הוידאו של דן" in about)
+    # ⚠️ דן: החלונית נגללה יחד עם השכבה והגלילה עברה לספרייה שמאחור.
+    # עכשיו היא חסומה לגובה המסך, והתוכן נגלל בתוכה בפס משלו.
+    box = page.evaluate("""(()=>{const t=document.querySelector('#about-layer .tome').getBoundingClientRect();
+        const sc=document.querySelector('#about-layer .tome__scroll');
+        return {bottom:t.bottom, vh:innerHeight, oy:getComputedStyle(sc).overflowY,
+                locked:getComputedStyle(document.body).overflowY==='hidden'}})()""")
+    check("about modal fits the screen and scrolls inside itself",
+          box["bottom"] <= box["vh"] and box["oy"] == "auto", str(box))
+    check("page behind the about modal is locked", box["locked"], str(box))
     page.screenshot(path=f"{SHOT}/v_about.png")
     page.keyboard.press("Escape")
     page.wait_for_timeout(300)

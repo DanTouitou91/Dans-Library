@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=David+Libre:wght@400;500;700&family=Miriam+Libre:wght@400;700&family=Rubik:wght@700&display=swap">
 
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -218,7 +218,7 @@
       <!-- ⚠️ הרשימה נבנית ב-script.js מתוך SHORTCUTS, שהוא אותו מקור
            שממנו נגזר גם מטפל המקשים. רשימה שנכתבת כאן ביד מתיישנת
            בפעם הראשונה שמשנים קיצור, ותיעוד ששקר גרוע מכלום. -->
-      <dl class="keys" data-keys-list></dl>
+      <dl class="keys tome__scroll" data-keys-list></dl>
     </div>
   </div>
 </div>
@@ -231,7 +231,7 @@
     <div class="tome__page">
       <h2 class="tome__title" id="about-title">אודות</h2>
       <span class="tome__flourish" aria-hidden="true">❦</span>
-      <div class="tome__text">
+      <div class="tome__text tome__scroll" tabindex="0" aria-label="תוכן האודות">
         <p>ברוכים הבאים לאוסף ספרי הלמידה של דן.</p>
         <p>האתר הזה נולד מתוך צורך אישי ותשוקה לסביבת למידה שקטה, מאורגנת ומעוררת השראה. כסטודנט לתואר ראשון במדיניות ציבורית באוניברסיטה הפתוחה, מצאתי את עצמי מתמודד עם כמות עצומה של חומרי קריאה ומקורות מידע. כדי לייעל את הלמידה שלי, אני אוסף את המידע מכל קורס, מסכם, מנתח אותו, ומאגד הכל לספר מרוכז אחד. במקום ללכת לאיבוד בערימות של קבצים, יצרתי מרחב וירטואלי שבו כל קורס מקבל את המקום הראוי לו על המדף, ממש כמו בספרייה קלאסית של פעם.</p>
         <p>החזון מאחורי האתר הוא להפוך את תהליך הקריאה האקדמי מחובה טכנית לחוויה נעימה ומרגיעה. העיצוב הוינטג'י, הלחצנים שמרגישים כמו פליז ועץ, ואפקט הדפדוף הריאליסטי, נועדו להכניס את הקורא לאווירה של מיקוד והעמקה, כמו לשבת בחדר עבודה עתיק עם כוס קפה וספר טוב.</p>
@@ -405,7 +405,7 @@
 <!-- ⚠️ ?v= קיים כדי לעקוף עותק ישן ששמור אצל משתמש. הנכונות עצמה
      נשענת על Cache-Control ב-_headers, ולכן אין חובה לעדכן אותו בכל
      שינוי — רק כשצריך לשבור מטמון תקוע. -->
-<script src="script.js?v=8" defer></script>
+<script src="script.js?v=9" defer></script>
 
 <!-- Google Analytics. ⚠️ הקוד המוטבע שגוגל מספקת נמצא ב-assets/analytics.js
      ולא כאן: ל-script-src אין 'unsafe-inline', ובלוק מוטבע היה נחסם בשקט. -->

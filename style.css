@@ -603,7 +603,17 @@ ul { margin: 0; padding: 0; list-style: none; }
   display: grid; place-items: center;
   padding: clamp(.8rem, 3vw, 2rem);
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
+
+/* כששכבה פתוחה הדף שמאחור לא זז — גם כשגוללים מעל הרקע המוחשך.
+   ⚠️ הנעילה על body ולא על html: ל-body יש overflow-x: hidden, ולכן
+   overflow-y שלו מחושב auto. overflow: hidden על html הפך את body לאזור
+   גלילה עצמאי בגובה המסך — והמדף קפץ לראש הדף ואיבד את המקום (נמדד:
+   195 → 0). על body הערך עובר לחלון עצמו, והמיקום נשמר.
+   scrollbar-gutter שומר את מקום הפס, כדי שהמדף לא יזוז הצידה. */
+html.layer-open { scrollbar-gutter: stable; }
+html.layer-open body { overflow: hidden; }
 
 .overlay__backdrop {
   position: fixed; inset: 0;
@@ -751,9 +761,15 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 
 /* --- חלונית אודות: דף בספר עתיק --- */
+/* ⚠️ דן: החלונית נגללה יחד עם כל השכבה — הכותרת וכפתור הסגירה ברחו
+   למעלה, ובסוף הגלילה היא עברה לספרייה שמאחור. עכשיו גובה החלונית
+   חסום למסך, והגלילה מתרחשת רק בתוכן (.tome__scroll) עם פס פליז משלו.
+   הכותרת וכפתור הסגירה נשארים במקומם. */
 .tome {
   position: relative; z-index: 1;
   inline-size: min(720px, 100%);
+  display: flex; flex-direction: column;
+  max-block-size: calc(100dvh - 2 * clamp(.8rem, 3vw, 2rem));
   border-radius: 3px;
   background: linear-gradient(90deg, var(--wood-dark), var(--wood) 8%, var(--wood) 92%, var(--wood-dark));
   padding: clamp(.5rem, 1.4vw, .85rem);
@@ -763,6 +779,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 .tome__page {
   position: relative;
+  display: flex; flex-direction: column;
+  flex: 1 1 auto; min-block-size: 0;
   padding: clamp(1.6rem, 4.5vw, 3.2rem) clamp(1.3rem, 4.5vw, 3rem);
   color: var(--ink);
   background-color: var(--paper);
@@ -796,6 +814,15 @@ ul { margin: 0; padding: 0; list-style: none; }
   margin-block-end: 1.5rem;
 }
 
+.tome__title, .tome__flourish { flex: none; }
+.tome__scroll {
+  flex: 1 1 auto; min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;          /* הגלילה לא "נשפכת" לספרייה שמאחור */
+  /* מקום לפס, בלי שהטקסט ייצמד אליו */
+  padding-inline-end: .7rem;
+  margin-inline-end: -.7rem;
+}
 .tome__text { font-size: clamp(.98rem, 1.1vw, 1.06rem); text-align: justify; }
 
 /* אות פתיחה מוגדלת בפסקה הראשונה */
@@ -898,7 +925,8 @@ html,
 .stage,
 .finder,
 .finder__list,
-.notepad__text {
+.notepad__text,
+.tome__scroll {
   scrollbar-width: thin;
   scrollbar-color: var(--brass) var(--sb-track);
 }
@@ -907,7 +935,8 @@ html::-webkit-scrollbar,
 .stage::-webkit-scrollbar,
 .finder::-webkit-scrollbar,
 .finder__list::-webkit-scrollbar,
-.notepad__text::-webkit-scrollbar {
+.notepad__text::-webkit-scrollbar,
+.tome__scroll::-webkit-scrollbar {
   inline-size: 11px;
   block-size: 11px;
 }
@@ -916,7 +945,8 @@ html::-webkit-scrollbar-track,
 .stage::-webkit-scrollbar-track,
 .finder::-webkit-scrollbar-track,
 .finder__list::-webkit-scrollbar-track,
-.notepad__text::-webkit-scrollbar-track {
+.notepad__text::-webkit-scrollbar-track,
+.tome__scroll::-webkit-scrollbar-track {
   background: var(--sb-track);
   border-radius: 8px;
 }
@@ -926,7 +956,8 @@ html::-webkit-scrollbar-thumb,
 .stage::-webkit-scrollbar-thumb,
 .finder::-webkit-scrollbar-thumb,
 .finder__list::-webkit-scrollbar-thumb,
-.notepad__text::-webkit-scrollbar-thumb {
+.notepad__text::-webkit-scrollbar-thumb,
+.tome__scroll::-webkit-scrollbar-thumb {
   border-radius: 8px;
   border: 2px solid transparent;
   background-clip: padding-box;
@@ -940,7 +971,8 @@ html::-webkit-scrollbar-thumb:hover,
 .stage::-webkit-scrollbar-thumb:hover,
 .finder::-webkit-scrollbar-thumb:hover,
 .finder__list::-webkit-scrollbar-thumb:hover,
-.notepad__text::-webkit-scrollbar-thumb:hover {
+.notepad__text::-webkit-scrollbar-thumb:hover,
+.tome__scroll::-webkit-scrollbar-thumb:hover {
   background-image: linear-gradient(180deg,
     #F2DDA8 0%, var(--brass-lt) 55%, var(--brass) 100%);
 }

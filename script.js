@@ -681,6 +681,8 @@ const Layers = {
   get topEl() { return this.stack[this.stack.length - 1]?.el || null; },
 
   setBackgroundInert(on) {
+    // הדף שמאחור נעול לגלילה כל עוד שכבה פתוחה — ראו html.layer-open
+    document.documentElement.classList.toggle('layer-open', on);
     const shelf = $('#shelf-view');
     if (!shelf) return;
     if ('inert' in HTMLElement.prototype) {
