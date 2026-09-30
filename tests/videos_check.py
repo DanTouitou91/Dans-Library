@@ -39,7 +39,8 @@ CATALOG = {"tapes": [
     # ‏כמו הסרטונים של דן: פתיחה, כותרת חלק, "פרק <מספר>", סיום
     {"id": "numbered", "title": "קלטת ממוספרת", "src": REL, "duration": 12, "chapters": [
         {"t": 0, "title": "פתיחה"}, {"t": 2, "title": "חלק א · יסודות"}, {"t": 3, "title": "פרק 1 · אחד"},
-        {"t": 5, "title": "שער ב · המשך"}, {"t": 6, "title": "פרק 2 · שניים"}, {"t": 10, "title": "סיום"}]},
+        {"t": 5, "title": "שער ב · המשך"}, {"t": 6, "title": "פרק 2 · שניים"},
+        {"t": 8, "title": "קו ג · עוד"}, {"t": 9, "title": "תחנת מעבר: לא כותרת"}, {"t": 10, "title": "סיום"}]},
     # ‏מארח שאינו GitHub — חייב להידחות בגלוי, לא להופיע כקלטת שלעולם לא תתנגן
     {"id": "evil", "title": "מארח זר", "src": "https://example.com/x.mp4"},
 ]}
@@ -337,9 +338,11 @@ with sync_playwright() as pw:
     page.click("[data-act=play-prompt]")
     wait_for(page, "()=>!document.querySelector('.tv__video').paused")
     nos = page.evaluate("[...document.querySelectorAll('.ch__no')].map(e=>e.textContent)")
-    check("chapter list numbers by title (פרק 1 → 01, headings unnumbered)", nos == ["", "", "01", "", "02", ""], str(nos))
-    # ‏"חלק" וגם "שער" — הספר של מינהל ציבורי מחולק לשערים
-    check("both 'חלק' and 'שער' headings styled as headings", page.locator("li.ch-part").count() == 2)
+    check("chapter list numbers by title (פרק 1 → 01, headings unnumbered)", nos == ["", "", "01", "", "02", "", "", ""], str(nos))
+    # ‏כל ספר קורא לחלקים אחרת (חלק / שער / קו) — הכלל כללי, ו"תחנת מעבר:" אינה כותרת
+    parts = page.evaluate("[...document.querySelectorAll('li.ch-part .ch__title')].map(e=>e.textContent)")
+    check("section headings recognised by pattern (חלק/שער/קו), not 'תחנת מעבר'",
+          parts == ["חלק א · יסודות", "שער ב · המשך", "קו ג · עוד"], str(parts))
     meta = page.evaluate("Store.cover(Catalog.byId('numbered')).querySelector('.tape__meta').textContent")
     check("box counts real chapters, not opening/headings/ending", "2 פרקים" in meta, meta)
     page.focus("#player-view")
