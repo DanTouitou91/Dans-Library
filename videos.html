@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=VT323&display=swap">
 
-<link rel="stylesheet" href="videos.css?v=4">
+<link rel="stylesheet" href="videos.css?v=6">
 </head>
 <body>
 
@@ -48,7 +48,7 @@
   <header class="store__head">
     <a class="store__home" href="./">
       <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-back"/></svg>
-      <span>חזרה לספרייה</span>
+      <span><span class="store__home-long">חזרה </span>לספרייה</span>
     </a>
 
     <div class="sign">
@@ -58,12 +58,21 @@
 
     <div class="store__tools">
       <p class="store__open" aria-hidden="true"><span>פָּתוּחַ</span></p>
-      <!-- מתג אור של קיר, כמו המנורה בספרייה. אותה הגדרה (dl:settings.theme),
-           כך שכיבוי האור כאן מכבה גם את המנורה בספרייה, ולהפך. -->
-      <button type="button" class="switch" data-light-toggle aria-pressed="true"
-              aria-label="כיבוי האור" title="כיבוי האור">
-        <span class="switch__plate" aria-hidden="true"><span class="switch__lever"></span></span>
-        <span class="switch__label" data-light-label aria-hidden="true">כבה אור</span>
+      <!-- מתג האור, כמו המנורה בספרייה. אותה הגדרה (dl:settings.theme), כך
+           שכיבוי האור כאן מכבה גם את המנורה בספרייה, ולהפך.
+           ⚠️ דן: מפסק קיר לבן "לא ברור באיזה מצב נמצא". לכן המצב כתוב על
+           המתג עצמו (דלוק/כבוי), הנורה זוהרת רק כשהאור דולק, והצבע מתחלף. -->
+      <button type="button" class="lightsw" role="switch" aria-checked="true" data-light-toggle
+              aria-label="האור בחנות" title="כיבוי האור">
+        <svg class="lightsw__bulb" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path class="lightsw__rays" d="M12 .8v2.2M3.6 4.2l1.6 1.6M20.4 4.2l-1.6 1.6M1 12h2.2M20.8 12H23"/>
+          <path class="lightsw__glass" d="M12 5a6.3 6.3 0 0 0-3.8 11.3c.6.5 1 1.2 1 2V19h5.6v-.7c0-.8.4-1.5 1-2A6.3 6.3 0 0 0 12 5z"/>
+          <path class="lightsw__base" d="M9.4 21h5.2M10.3 23h3.4"/>
+        </svg>
+        <span class="lightsw__track" aria-hidden="true">
+          <span class="lightsw__knob"></span>
+          <span class="lightsw__state" data-light-state>דלוק</span>
+        </span>
       </button>
       <!-- אודות: תווית מחיר צהובה עם חור, כמו אלה שעל קופסאות ההשכרה -->
       <button type="button" class="tag-btn" data-act="about" aria-haspopup="dialog">
@@ -101,10 +110,17 @@
       <span>חזרה למדף</span>
     </button>
     <h2 class="room__title" id="tape-title"></h2>
-    <button type="button" class="switch switch--mini" data-light-toggle aria-pressed="true"
-            aria-label="כיבוי האור" title="כיבוי האור">
-      <span class="switch__plate" aria-hidden="true"><span class="switch__lever"></span></span>
-      <span class="switch__label" data-light-label aria-hidden="true">כבה אור</span>
+    <button type="button" class="lightsw lightsw--mini" role="switch" aria-checked="true" data-light-toggle
+            aria-label="האור בחנות" title="כיבוי האור">
+      <svg class="lightsw__bulb" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path class="lightsw__rays" d="M12 .8v2.2M3.6 4.2l1.6 1.6M20.4 4.2l-1.6 1.6M1 12h2.2M20.8 12H23"/>
+        <path class="lightsw__glass" d="M12 5a6.3 6.3 0 0 0-3.8 11.3c.6.5 1 1.2 1 2V19h5.6v-.7c0-.8.4-1.5 1-2A6.3 6.3 0 0 0 12 5z"/>
+        <path class="lightsw__base" d="M9.4 21h5.2M10.3 23h3.4"/>
+      </svg>
+      <span class="lightsw__track" aria-hidden="true">
+        <span class="lightsw__knob"></span>
+        <span class="lightsw__state" data-light-state>דלוק</span>
+      </span>
     </button>
     <button type="button" class="knob-btn knob-btn--icon" data-act="keys" aria-haspopup="dialog"
             aria-label="קיצורי מקלדת" title="קיצורי מקלדת">
@@ -232,7 +248,7 @@
   <form method="dialog"><button class="knob-btn" autofocus>סגירה</button></form>
 </dialog>
 
-<script src="videos.js?v=2" defer></script>
+<script src="videos.js?v=4" defer></script>
 
 <!-- Google Analytics — כמו בספרייה. ⚠️ הקוד המוטבע יושב ב-assets/analytics.js
      ולא כאן, כי ל-script-src אין 'unsafe-inline'. -->

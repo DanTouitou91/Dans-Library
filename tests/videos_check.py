@@ -148,6 +148,8 @@ with sync_playwright() as pw:
     page.goto(BASE + "/", wait_until="networkidle")
     link = page.locator("#btn-videos")
     check("library masthead links to the video store", link.count() == 1 and link.get_attribute("href") == "videos.html")
+    check("library button reads 'לספריית קלטות הוידאו של דן'",
+          link.locator(".btn__label").inner_text().strip() == "לספריית קלטות הוידאו של דן")
     link.click()
     page.wait_for_load_state("networkidle")
     check("library button opens videos.html", page.url.endswith("/videos.html"), page.url)
@@ -177,8 +179,10 @@ with sync_playwright() as pw:
     page.wait_for_timeout(650)
     after = page.evaluate("document.documentElement.dataset.theme")
     check("light switch toggles the theme", before != after and after in ("light", "dark"), f"{before} → {after}")
-    check("switch state is announced (aria-pressed = light on)",
-          sw.get_attribute("aria-pressed") == ("true" if after == "light" else "false"))
+    check("switch state is announced (role=switch, aria-checked = light on)",
+          sw.get_attribute("role") == "switch" and sw.get_attribute("aria-checked") == ("true" if after == "light" else "false"))
+    check("switch shows its current state in words (דלוק/כבוי)",
+          sw.locator("[data-light-state]").inner_text() == ("דלוק" if after == "light" else "כבוי"))
     saved = json.loads(page.evaluate("localStorage.getItem('dl:settings')") or "{}")
     check("switch writes the library's own setting and keeps its other fields",
           saved.get("theme") == after and "readerMode" in saved and "zoom" in saved, str(saved))
@@ -298,6 +302,11 @@ with sync_playwright() as pw:
     check("leaving releases the video download", vstate(page)["src"] is None)
     check("unfinished tape gets a 'not rewound' sticker",
           page.locator(".tape[data-tape-id=test-tape] .sticker--rewind").count() == 1)
+    # ⚠️ דן: הפס "לא גולגלה" הסתיר את כותרת המשנה ואת שורת האורך
+    hide = page.evaluate("""(()=>{const t=document.querySelector('.tape[data-tape-id=test-tape]');
+        const r=e=>t.querySelector(e)?.getBoundingClientRect(); const a=r('.sticker--rewind');
+        return ['.tape__sub','.tape__meta'].filter(e=>{const b=r(e);return b&&!(a.bottom<=b.top||a.top>=b.bottom)})})()""")
+    check("'not rewound' band covers no text on the box", hide == [], str(hide))
     check("focus returns to the tape that was opened",
           page.evaluate("document.activeElement?.dataset?.tapeId") == "test-tape")
 

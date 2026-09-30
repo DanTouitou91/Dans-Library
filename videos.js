@@ -143,11 +143,13 @@ const Light = {
     document.documentElement.dataset.theme = mode;
     const on = mode !== 'dark';
     for (const b of $$('[data-light-toggle]')) {
-      b.setAttribute('aria-pressed', String(on));
-      b.setAttribute('aria-label', on ? 'כיבוי האור' : 'הדלקת האור');
+      // ‏role="switch" + aria-checked: קורא מסך אומר "האור בחנות, מתג, מופעל".
+      // ‏הכיתוב על המתג מציג את *המצב* (דלוק/כבוי) ולא את הפעולה — ערבוב של
+      // ‏השניים ("כבה אור" על מתג דולק) הוא בדיוק מה שבלבל.
+      b.setAttribute('aria-checked', String(on));
       b.title = on ? 'כיבוי האור' : 'הדלקת האור';
-      const label = $('[data-light-label]', b);
-      if (label) label.textContent = on ? 'כבה אור' : 'הדלק אור';
+      const state = $('[data-light-state]', b);
+      if (state) state.textContent = on ? 'דלוק' : 'כבוי';
     }
     $('meta[name="theme-color"]')?.setAttribute('content', on ? '#0E2C8C' : '#040B2A');
     // נורות פלורסנט של חנות מהבהבות רגע לפני שהן נדלקות
@@ -300,13 +302,14 @@ const Store = {
       span('tape__band', 'וידאו'),
       span('tape__title', tape.title),
     );
+    // בין השם לכותרת המשנה, בתוך הזרימה — כך המדבקה לא מסתירה שום כיתוב
+    if (saved) el.append(span('sticker sticker--rewind', 'לא גולגלה'));
     if (tape.subtitle) el.append(span('tape__sub', tape.subtitle));
     const meta = [tape.duration ? minutes(tape.duration) : '', tape.chapters.length ? `${chapterCount(tape)} פרקים` : '']
       .filter(Boolean).join(' · ');
     if (meta) el.append(span('tape__meta', meta));
     el.append(span('tape__badge', 'PAL'));
     if (tape.isNew) el.append(span('sticker sticker--new', 'חדש!'));
-    if (saved) el.append(span('sticker sticker--rewind', 'לא גולגלה'));
 
     el.addEventListener('click', () => this.pick(el, tape));
     return el;
