@@ -44,9 +44,10 @@ function spoken(sec) {
   sec = Math.max(0, Math.floor(sec || 0));
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
   const parts = [];
-  if (h) parts.push(`${h} שעות`);
-  if (m) parts.push(`${m} דקות`);
-  if (s || !parts.length) parts.push(`${s} שניות`);
+  // ‏"1 שעות" נשמע שבור בקורא מסך — ביחיד אומרים "שעה", "דקה", "שנייה"
+  if (h) parts.push(h === 1 ? 'שעה' : `${h} שעות`);
+  if (m) parts.push(m === 1 ? 'דקה' : `${m} דקות`);
+  if (s || !parts.length) parts.push(s === 1 ? 'שנייה' : `${s} שניות`);
   return parts.join(' ו-');
 }
 
@@ -808,7 +809,9 @@ const Player = {
     const numbered = chs.some((x) => /^פרק\s+\d+/.test(x.title));
     if (!numbered) return { no: i + 1, part: false };
     const m = c.title.match(/^פרק\s+(\d+)/);
-    return { no: m ? Number(m[1]) : null, part: /^חלק\s/.test(c.title) };
+    // ⚠️ כותרת ביניים היא "חלק" או "שער": הספר "מבוא למינהל ולניהול ציבורי"
+    // מחולק לשערים, ובלי "שער" כאן הכותרות האלה נראו כמו שורה רגילה ברשימה.
+    return { no: m ? Number(m[1]) : null, part: /^(חלק|שער)\s/.test(c.title) };
   },
 
   /** הכותרת להצגה: "פרק 4 · עצמה" → "עצמה", כי המספר כבר מוצג לידה. */

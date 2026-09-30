@@ -482,8 +482,10 @@ body {
   font-weight: 900; line-height: 1;
   pointer-events: none;
 }
+/* ⚠️ על פינת הפס העליון ולא מתחתיו: בשם ארוך ("מבוא למינהל ולניהול
+   ציבורי") שתי שורות הכותרת עלו עד המדבקה והיא נגעה בהן. */
 .sticker--new {
-  top: 34px; right: -6px;
+  top: 12px; right: -6px;
   width: 58px; height: 58px;
   display: grid; place-items: center;
   font-size: .95rem;
@@ -1048,7 +1050,7 @@ body {
   .rack__row > li { scroll-snap-align: center; }
   .tape__title { font-size: .98rem; }
   /* ⚠️ בקופסה הצרה המדבקה בגודל המלא ישבה על שם הקלטת ("ן, חברה") */
-  .sticker--new { top: 22px; right: 2px; width: 44px; height: 44px; font-size: .78rem; }
+  .sticker--new { top: 10px; right: 7px; width: 44px; height: 44px; font-size: .78rem; }
   .tape__meta { white-space: nowrap; font-size: .66rem; padding-inline: .55em; }
 
   .room__bar .knob-btn span { display: none; }

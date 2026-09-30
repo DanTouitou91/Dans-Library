@@ -39,7 +39,7 @@ CATALOG = {"tapes": [
     # ‏כמו הסרטונים של דן: פתיחה, כותרת חלק, "פרק <מספר>", סיום
     {"id": "numbered", "title": "קלטת ממוספרת", "src": REL, "duration": 12, "chapters": [
         {"t": 0, "title": "פתיחה"}, {"t": 2, "title": "חלק א · יסודות"}, {"t": 3, "title": "פרק 1 · אחד"},
-        {"t": 6, "title": "פרק 2 · שניים"}, {"t": 10, "title": "סיום"}]},
+        {"t": 5, "title": "שער ב · המשך"}, {"t": 6, "title": "פרק 2 · שניים"}, {"t": 10, "title": "סיום"}]},
     # ‏מארח שאינו GitHub — חייב להידחות בגלוי, לא להופיע כקלטת שלעולם לא תתנגן
     {"id": "evil", "title": "מארח זר", "src": "https://example.com/x.mp4"},
 ]}
@@ -337,8 +337,9 @@ with sync_playwright() as pw:
     page.click("[data-act=play-prompt]")
     wait_for(page, "()=>!document.querySelector('.tv__video').paused")
     nos = page.evaluate("[...document.querySelectorAll('.ch__no')].map(e=>e.textContent)")
-    check("chapter list numbers by title (פרק 1 → 01, headings unnumbered)", nos == ["", "", "01", "02", ""], str(nos))
-    check("part heading styled as a heading", page.locator("li.ch-part").count() == 1)
+    check("chapter list numbers by title (פרק 1 → 01, headings unnumbered)", nos == ["", "", "01", "", "02", ""], str(nos))
+    # ‏"חלק" וגם "שער" — הספר של מינהל ציבורי מחולק לשערים
+    check("both 'חלק' and 'שער' headings styled as headings", page.locator("li.ch-part").count() == 2)
     meta = page.evaluate("Store.cover(Catalog.byId('numbered')).querySelector('.tape__meta').textContent")
     check("box counts real chapters, not opening/headings/ending", "2 פרקים" in meta, meta)
     page.focus("#player-view")
@@ -379,6 +380,13 @@ with sync_playwright() as pw:
     check("every tape in tapes.json renders (nothing silently rejected)", shown == n_real, f"{shown}/{n_real}")
     if not n_real:
         check("empty catalog shows the 'coming soon' shelf", page.locator(".rack--empty").count() == 1)
+    # ⚠️ "מבוא למינהל ולניהול ציבורי" — שם ארוך בשתי שורות עלה עד מדבקת "חדש!"
+    hits = page.evaluate("""[...document.querySelectorAll('.tape')].filter(t=>{
+        const st=t.querySelector('.sticker--new'); if(!st) return false;
+        const r=document.createRange(); r.selectNodeContents(t.querySelector('.tape__title'));
+        const a=st.getBoundingClientRect(), b=r.getBoundingClientRect();
+        return !(a.bottom<=b.top||a.top>=b.bottom||a.right<=b.left||a.left>=b.right)}).map(t=>t.dataset.tapeId)""")
+    check("'new' sticker covers no tape title (real catalog)", hits == [], str(hits))
     check("real catalog page: no JS errors / CSP violations", not rec["errors"] and not rec["csp"],
           "; ".join((rec["errors"] + rec["csp"])[:2]))
     ctx.close(); browser.close()
