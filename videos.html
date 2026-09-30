@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>סִפְרִיַּית הַקַּלָּטוֹת · אוסף ספרי הלמידה של דן</title>
+<title>אוסף קלטות הוידאו של דן</title>
 <meta name="description" content="הסרטונים של דן מתוך ספרי הלימוד — מדף קלטות וידאו, מכשיר וידאו וטלוויזיה של פעם.">
 <meta name="theme-color" content="#0E2C8C">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=VT323&display=swap">
 
-<link rel="stylesheet" href="videos.css?v=1">
+<link rel="stylesheet" href="videos.css?v=4">
 </head>
 <body>
 
@@ -34,6 +34,7 @@
     <symbol id="v-eject" viewBox="0 0 24 24"><path d="M12 5 20 14H4zM4 16.5h16V19H4z"/></symbol>
     <symbol id="v-rewind-all" viewBox="0 0 24 24"><path d="M5 5h2.4v14H5zM14 6v12l-6-6zM21 6v12l-6-6z"/></symbol>
     <symbol id="v-keys" viewBox="0 0 24 24"><rect x="2.8" y="6.5" width="18.4" height="11" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6.4 10h.01M9.6 10h.01M12.8 10h.01M16 10h.01M17.6 13.2h.01M6.4 13.2h.01M9.2 13.9h5.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+    <symbol id="v-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="7.9" r="1.35"/></symbol>
     <symbol id="v-back" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5M4.5 12H15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </defs>
 </svg>
@@ -51,11 +52,27 @@
     </a>
 
     <div class="sign">
-      <h1 class="sign__title">סִפְרִיַּית הַקַּלָּטוֹת</h1>
-      <p class="sign__sub">השכרת וידאו · הסרטונים של דן מתוך ספרי הלימוד</p>
+      <h1 class="sign__title">אוסף קלטות הוידאו של דן</h1>
+      <p class="sign__sub">השכרת וידאו · סרטונים מתוך ספרי הלימוד</p>
     </div>
 
-    <p class="store__open" aria-hidden="true"><span>פָּתוּחַ</span></p>
+    <div class="store__tools">
+      <p class="store__open" aria-hidden="true"><span>פָּתוּחַ</span></p>
+      <!-- מתג אור של קיר, כמו המנורה בספרייה. אותה הגדרה (dl:settings.theme),
+           כך שכיבוי האור כאן מכבה גם את המנורה בספרייה, ולהפך. -->
+      <button type="button" class="switch" data-light-toggle aria-pressed="true"
+              aria-label="כיבוי האור" title="כיבוי האור">
+        <span class="switch__plate" aria-hidden="true"><span class="switch__lever"></span></span>
+        <span class="switch__label" data-light-label aria-hidden="true">כבה אור</span>
+      </button>
+      <!-- אודות: תווית מחיר צהובה עם חור, כמו אלה שעל קופסאות ההשכרה -->
+      <button type="button" class="tag-btn" data-act="about" aria-haspopup="dialog">
+        <span class="tag-btn__face">
+          <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-info"/></svg>
+          <span>אודות</span>
+        </span>
+      </button>
+    </div>
   </header>
 
   <main class="aisle" id="aisle" aria-label="מדפי הקלטות">
@@ -64,7 +81,7 @@
 
   <aside class="counter" aria-label="דלפק ההשכרה">
     <p class="counter__rule">
-      <strong>נָא לְהַחֲזִיר מְגֻלְגָּל!</strong>
+      <strong>נָא לְהַחֲזִיר מְגֻלְגָּל! <span class="wink" role="img" aria-label="קריצה">😉</span></strong>
       קלטת שלא סיימתם מקבלת מדבקה, והצפייה תמשיך בדיוק מאיפה שעצרתם.
     </p>
   </aside>
@@ -84,6 +101,11 @@
       <span>חזרה למדף</span>
     </button>
     <h2 class="room__title" id="tape-title"></h2>
+    <button type="button" class="switch switch--mini" data-light-toggle aria-pressed="true"
+            aria-label="כיבוי האור" title="כיבוי האור">
+      <span class="switch__plate" aria-hidden="true"><span class="switch__lever"></span></span>
+      <span class="switch__label" data-light-label aria-hidden="true">כבה אור</span>
+    </button>
     <button type="button" class="knob-btn knob-btn--icon" data-act="keys" aria-haspopup="dialog"
             aria-label="קיצורי מקלדת" title="קיצורי מקלדת">
       <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-keys"/></svg>
@@ -171,6 +193,14 @@
         </div>
       </div>
 
+      <!-- ⚠️ דן: הדיבור והטקסט בסרטונים לא תמיד מדויקים — הצופה צריך לדעת
+           שהספר הוא המקור המחייב. הקישור לספר מוצג רק כשלקלטת יש שדה book. -->
+      <p class="notice">
+        <span class="notice__badge" aria-hidden="true">!</span>
+        <span><strong>לתשומת לב הצופים:</strong> ייתכנו שיבושים בדיבור או טעויות בטקסט שבסרטון.
+          המקור המדויק הוא הספר<span data-book-wrap hidden> — <a class="notice__link" data-book-link href="./">לספר המלא בספרייה</a></span>.</span>
+      </p>
+
       <nav class="chapters" id="chapters" aria-label="פרקי הקלטת" data-open="false">
         <h3 class="chapters__title">פרקים</h3>
         <ol class="chapters__list" data-chapter-list></ol>
@@ -180,6 +210,20 @@
   </div>
 </div>
 
+<!-- אודות האוסף — מעוצב כגב של קופסת קלטת -->
+<dialog class="about" id="about-dialog" aria-labelledby="about-title">
+  <p class="about__band" aria-hidden="true">וידאו</p>
+  <h2 class="about__title" id="about-title">אודות האוסף</h2>
+  <div class="about__text">
+    <p class="about__lead">ברוכים הבאים לאוסף קלטות הוידאו של דן.</p>
+    <p>לצד הספרים שבספרייה, יצרתי סרטונים מתוך ספרי הלימוד, כדי שאפשר יהיה ללמוד את החומר גם בצפייה ובהאזנה ולא רק בקריאה. כל קלטת מלווה את אחד הקורסים, ומחולקת לפרקים לפי מבנה הספר.</p>
+    <p>העיצוב שואב השראה מחנויות השכרת הווידאו של שנות ה-90: מדף קלטות, מכשיר וידאו וטלוויזיה של פעם. בוחרים קלטת, מכניסים אותה למכשיר, ואפשר לקפוץ ישר לפרק הרצוי, להגדיל למסך מלא, ולחזור בכל רגע להמשך הצפייה בדיוק מהמקום שבו עצרתם.</p>
+    <p>צפייה מהנה!</p>
+  </div>
+  <p class="about__rating" aria-hidden="true">מותר<br>לכל<br>גיל</p>
+  <form method="dialog"><button class="knob-btn" autofocus>סגירה</button></form>
+</dialog>
+
 <!-- חלונית קיצורי המקלדת. <dialog> מקורי: מלכוד פוקוס, Esc והחזרת
      הפוקוס מגיעים מהדפדפן, בלי מנגנון שכבות משלנו. -->
 <dialog class="keys" id="keys-dialog" aria-labelledby="keys-title">
@@ -188,7 +232,7 @@
   <form method="dialog"><button class="knob-btn" autofocus>סגירה</button></form>
 </dialog>
 
-<script src="videos.js?v=1" defer></script>
+<script src="videos.js?v=2" defer></script>
 
 <!-- Google Analytics — כמו בספרייה. ⚠️ הקוד המוטבע יושב ב-assets/analytics.js
      ולא כאן, כי ל-script-src אין 'unsafe-inline'. -->

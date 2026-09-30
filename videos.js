@@ -1,5 +1,5 @@
 /* ============================================================================
- * סִפְרִיַּית הַקַּלָּטוֹת — חנות הווידאו של אוסף ספרי הלמידה של דן
+ * אוסף קלטות הוידאו של דן — חנות הווידאו שלצד אוסף ספרי הלמידה
  * ----------------------------------------------------------------------------
  * עמוד נפרד מהספרייה, בכוונה: הקורא של הספרים עובד ונבדק, ואין סיבה
  * שקוד וידאו יישב בתוכו. הקטלוג נטען מ-tapes.json.
@@ -52,6 +52,16 @@ function spoken(sec) {
 
 const minutes = (sec) => `${Math.max(1, Math.round((sec || 0) / 60))} דק׳`;
 
+/**
+ * כמה פרקים יש בקלטת — כמו שהקורא סופר אותם.
+ * ⚠️ לא chapters.length: ברשימה יש גם "פתיחה", כותרות חלקים ו"סיום", והקופסה
+ * של "יחסים בינלאומיים" הציגה "12 פרקים" בכותרת המשנה ו-"19 פרקים" מתחתיה.
+ */
+function chapterCount(tape) {
+  const numbered = tape.chapters.filter((c) => /^פרק\s+\d+/.test(c.title)).length;
+  return numbered || tape.chapters.length;
+}
+
 let announceTimer = null;
 function announce(msg) {
   clearTimeout(announceTimer);
@@ -102,6 +112,66 @@ const Saved = {
 };
 
 /* ============================================================================
+ * §2א — מתג האור
+ * ----------------------------------------------------------------------------
+ * ⚠️ אותה הגדרה בדיוק כמו המנורה בספרייה: dl:settings.theme ('auto' /
+ * 'light' / 'dark'), ואותו data-theme על <html>. כך מי שכיבה את האור
+ * בספרייה מגיע לחנות חשוכה ולהפך. הכתיבה שומרת את שאר השדות של
+ * הספרייה (readerMode, zoom) — דריסה של כל הרשומה הייתה מאפסת אותם.
+ * ========================================================================== */
+
+const Light = {
+  saved() { return Saved.read('dl:settings')?.theme || 'auto'; },
+
+  current() {
+    const t = this.saved();
+    if (t === 'light' || t === 'dark') return t;
+    return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  },
+
+  init() {
+    this.apply(this.current());
+    matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
+      if (this.saved() === 'auto') this.apply(this.current());
+    });
+    // לשונית אחרת (למשל הספרייה) שינתה את האור
+    addEventListener('storage', (e) => { if (e.key === 'dl:settings') this.apply(this.current()); });
+    $$('[data-light-toggle]').forEach((b) => b.addEventListener('click', () => this.toggle()));
+  },
+
+  apply(mode, { flicker = false } = {}) {
+    document.documentElement.dataset.theme = mode;
+    const on = mode !== 'dark';
+    for (const b of $$('[data-light-toggle]')) {
+      b.setAttribute('aria-pressed', String(on));
+      b.setAttribute('aria-label', on ? 'כיבוי האור' : 'הדלקת האור');
+      b.title = on ? 'כיבוי האור' : 'הדלקת האור';
+      const label = $('[data-light-label]', b);
+      if (label) label.textContent = on ? 'כבה אור' : 'הדלק אור';
+    }
+    $('meta[name="theme-color"]')?.setAttribute('content', on ? '#0E2C8C' : '#040B2A');
+    // נורות פלורסנט של חנות מהבהבות רגע לפני שהן נדלקות
+    if (flicker && on && !reducedMotion() && document.body.animate) {
+      document.body.animate([
+        { filter: 'brightness(.35)' },
+        { filter: 'brightness(1.1)', offset: 0.2 },
+        { filter: 'brightness(.5)', offset: 0.35 },
+        { filter: 'brightness(1.05)', offset: 0.6 },
+        { filter: 'brightness(1)' },
+      ], { duration: 520, easing: 'linear' });
+    }
+  },
+
+  toggle() {
+    const next = this.current() === 'dark' ? 'light' : 'dark';
+    const settings = Saved.read('dl:settings') || { theme: 'auto', readerMode: 'auto', zoom: 1 };
+    Saved.write('dl:settings', { ...settings, theme: next });
+    this.apply(next, { flicker: true });
+    announce(next === 'dark' ? 'האור כבה' : 'האור נדלק');
+  },
+};
+
+/* ============================================================================
  * §3 — החנות
  * ========================================================================== */
 
@@ -147,6 +217,8 @@ const Catalog = {
       src: t.src,
       duration: Number.isFinite(t.duration) ? t.duration : 0,
       isNew: !!t.new,
+      // הספר שממנו נוצר הסרטון (id מהקטלוג של הספרייה) — לקישור "לספר המלא"
+      book: typeof t.book === 'string' && /^[a-z0-9-]+$/.test(t.book) ? t.book : '',
       chapters,
     };
   },
@@ -219,7 +291,7 @@ const Store = {
 
     const bits = [tape.title];
     if (tape.duration) bits.push(spoken(tape.duration));
-    if (tape.chapters.length) bits.push(`${tape.chapters.length} פרקים`);
+    if (tape.chapters.length) bits.push(`${chapterCount(tape)} פרקים`);
     if (saved) bits.push(`הצפייה תמשיך מ-${fmt(saved)}`);
     el.setAttribute('aria-label', bits.join(' — '));
 
@@ -229,7 +301,7 @@ const Store = {
       span('tape__title', tape.title),
     );
     if (tape.subtitle) el.append(span('tape__sub', tape.subtitle));
-    const meta = [tape.duration ? minutes(tape.duration) : '', tape.chapters.length ? `${tape.chapters.length} פרקים` : '']
+    const meta = [tape.duration ? minutes(tape.duration) : '', tape.chapters.length ? `${chapterCount(tape)} פרקים` : '']
       .filter(Boolean).join(' · ');
     if (meta) el.append(span('tape__meta', meta));
     el.append(span('tape__badge', 'PAL'));
@@ -491,13 +563,16 @@ const Player = {
     this.attempts = 0;
     this.wantPlay = false;
     this.lastTime = 0;
-    document.title = `${tape.title} · סִפְרִיַּית הַקַּלָּטוֹת`;
+    document.title = `${tape.title} · אוסף קלטות הוידאו של דן`;
     $('#tape-title').textContent = tape.title;
     $('[data-fault]').hidden = true;
     this.hidePrompt();
     this.setLed('');
     this.renderChapters();
     this.setDuration(tape.duration);
+    const bookWrap = $('[data-book-wrap]');
+    bookWrap.hidden = !tape.book;
+    if (tape.book) $('[data-book-link]').href = `./#/book/${tape.book}`;
     // במחשב רשימת הפרקים פתוחה ליד המסך; בנייד היא נפתחת בלחיצה, כדי
     // שהטלוויזיה והפקדים יישארו בתוך המסך.
     this.toggleChapters(tape.chapters.length > 0 && matchMedia('(min-width: 901px)').matches, { focus: false });
@@ -548,7 +623,7 @@ const Player = {
     this.setLed('');
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     this.tape = null;
-    document.title = 'סִפְרִיַּית הַקַּלָּטוֹת · אוסף ספרי הלמידה של דן';
+    document.title = 'אוסף קלטות הוידאו של דן';
     if (!silent) announce('הקלטת הוצאה');
   },
 
@@ -977,7 +1052,7 @@ const Player = {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: this.tape.title,
       artist: 'דן טואיטו',
-      album: 'סִפְרִיַּית הַקַּלָּטוֹת',
+      album: 'אוסף קלטות הוידאו של דן',
     });
   },
 
@@ -1109,7 +1184,7 @@ const Keys = {
 
   onKey(e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if ($('#keys-dialog').open) return;                 // הדיאלוג מטפל ב-Esc בעצמו
+    if ($('dialog[open]')) return;                      // דיאלוג פתוח מטפל ב-Esc בעצמו
     if ($('#player-view').hidden || !Player.tape) return;
     const t = e.target;
     const tag = t?.tagName;
@@ -1147,8 +1222,10 @@ const Keys = {
 };
 
 async function init() {
+  Light.init();
   Player.init();
   document.addEventListener('keydown', (e) => Keys.onKey(e));
+  $('#store-view [data-act="about"]').addEventListener('click', () => $('#about-dialog').showModal());
   addEventListener('hashchange', () => Router.apply());
 
   try {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""בדיקות סִפְרִיַּית הַקַּלָּטוֹת — מול GitHub Releases מדומה (tests/fakegithub.py).
+"""בדיקות אוסף קלטות הוידאו של דן — מול GitHub Releases מדומה (tests/fakegithub.py).
 
 כל בדיקה כאן מודדת את מה שקורה בפועל בנגן (currentTime, מצב ניגון, מה שמוצג
 על המסך) ולא את מה שהקוד מדווח על עצמו.
@@ -159,6 +159,36 @@ with sync_playwright() as pw:
     lab = page.locator(".tape[data-tape-id=test-tape]").get_attribute("aria-label") or ""
     check("tape aria-label names title, length and chapters", "קלטת בדיקה" in lab and "3 פרקים" in lab, lab)
     check("'new' sticker shown", page.locator(".tape[data-tape-id=test-tape] .sticker--new").count() == 1)
+    check("page is named 'אוסף קלטות הוידאו של דן'", page.title() == "אוסף קלטות הוידאו של דן"
+          and page.locator(".sign__title").inner_text().strip() == "אוסף קלטות הוידאו של דן", page.title())
+    page.click("#store-view [data-act='about']")
+    page.wait_for_timeout(200)
+    check("about button opens the about dialog", page.evaluate("document.querySelector('#about-dialog').open"))
+    check("about dialog mentions the collection", "אוסף קלטות הוידאו של דן" in page.locator("#about-dialog").inner_text())
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(200)
+    check("Esc closes about and returns focus to its button",
+          not page.evaluate("document.querySelector('#about-dialog').open")
+          and page.evaluate("document.activeElement.dataset.act") == "about")
+    # ---------- מתג האור — אותה הגדרה כמו המנורה בספרייה ----------
+    sw = page.locator("#store-view [data-light-toggle]")
+    before = page.evaluate("document.documentElement.dataset.theme")
+    sw.click()
+    page.wait_for_timeout(650)
+    after = page.evaluate("document.documentElement.dataset.theme")
+    check("light switch toggles the theme", before != after and after in ("light", "dark"), f"{before} → {after}")
+    check("switch state is announced (aria-pressed = light on)",
+          sw.get_attribute("aria-pressed") == ("true" if after == "light" else "false"))
+    saved = json.loads(page.evaluate("localStorage.getItem('dl:settings')") or "{}")
+    check("switch writes the library's own setting and keeps its other fields",
+          saved.get("theme") == after and "readerMode" in saved and "zoom" in saved, str(saved))
+    page.goto(BASE + "/", wait_until="networkidle")
+    check("library opens with the same light state", page.evaluate("document.documentElement.getAttribute('data-theme')") == after)
+    page.goto(BASE + "/videos.html", wait_until="networkidle")
+    page.wait_for_selector(".tape")
+    check("store keeps the light state after reload", page.evaluate("document.documentElement.dataset.theme") == after)
+    page.locator("#store-view [data-light-toggle]").click()          # מחזירים את האור לקדמותו
+    page.wait_for_timeout(650)
     page.screenshot(path=f"{SHOT}/store-desktop.png")
 
     # ---------- הכנסת הקלטת ----------
@@ -175,6 +205,9 @@ with sync_playwright() as pw:
     check("zero CSP violations while playing via redirect", not rec["csp"], "; ".join(rec["csp"][:2]))
     check("request went through the GitHub 302", gh.count("redirect") >= 1 and gh.count("asset") >= 1,
           f"redirect={gh.count('redirect')} asset={gh.count('asset')}")
+    check("viewer notice about speech/text errors is shown under the player",
+          page.locator(".notice").is_visible() and "ייתכנו שיבושים בדיבור או טעויות בטקסט" in page.locator(".notice").inner_text())
+    check("tape without a book field hides the book link", not page.locator("[data-book-wrap]").is_visible())
     check("chapter list open beside the TV on desktop", page.locator("#chapters").get_attribute("data-open") == "true")
     page.screenshot(path=f"{SHOT}/player-desktop.png")
 
@@ -297,6 +330,8 @@ with sync_playwright() as pw:
     nos = page.evaluate("[...document.querySelectorAll('.ch__no')].map(e=>e.textContent)")
     check("chapter list numbers by title (פרק 1 → 01, headings unnumbered)", nos == ["", "", "01", "02", ""], str(nos))
     check("part heading styled as a heading", page.locator("li.ch-part").count() == 1)
+    meta = page.evaluate("Store.cover(Catalog.byId('numbered')).querySelector('.tape__meta').textContent")
+    check("box counts real chapters, not opening/headings/ending", "2 פרקים" in meta, meta)
     page.focus("#player-view")
     page.keyboard.press("Digit2")
     ok = wait_for(page, "()=>{const t=document.querySelector('.tv__video').currentTime;return t>=6&&t<10}", 3000)
@@ -318,6 +353,19 @@ with sync_playwright() as pw:
     page.goto(BASE + "/videos.html", wait_until="networkidle")
     page.wait_for_timeout(300)
     n_real = len(real.get("tapes", []))
+    lib_ids = set(re.findall(r"^\s+id: '([a-z0-9-]+)',", open(os.path.join(ROOT, "script.js"), encoding="utf-8").read(), re.M))
+    bad = [t["id"] for t in real.get("tapes", []) if t.get("book") and t["book"] not in lib_ids]
+    check("every tape's book link points to a book that exists in the library", not bad, str(bad))
+    if n_real:
+        first = real["tapes"][0]
+        page.goto(BASE + f"/videos.html#/tape/{first['id']}", wait_until="networkidle")
+        page.wait_for_timeout(300)
+        if first.get("book"):
+            href = page.locator("[data-book-link]").get_attribute("href")
+            check("notice links to the tape's book", page.locator("[data-book-link]").is_visible()
+                  and href == f"./#/book/{first['book']}", href)
+        page.goto(BASE + "/videos.html", wait_until="networkidle")
+        page.wait_for_timeout(300)
     shown = page.locator(".tape:not(.tape--blank)").count()
     check("every tape in tapes.json renders (nothing silently rejected)", shown == n_real, f"{shown}/{n_real}")
     if not n_real:

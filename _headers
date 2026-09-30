@@ -12,7 +12,7 @@
 # ‎גבוה בהרבה מקובץ נפרד אחד. script-src נשאר בלי unsafe-inline.
 
 #
-# ‎הערה על media-src (סִפְרִיַּית הַקַּלָּטוֹת):
+# ‎הערה על media-src (אוסף קלטות הוידאו של דן):
 # ‎הסרטונים גדולים מדי למאגר ויושבים ב-GitHub Releases. הכתובת ב-github.com
 # ‎מחזירה 302 לכתובת חתומה ב-release-assets.githubusercontent.com, ו-CSP
 # ‎בודק גם את יעד ההפניה — לכן שני המארחים חייבים להופיע. objects.* הוא
@@ -59,7 +59,7 @@
   Cache-Control: public, max-age=0, must-revalidate
 /assets/*
   Cache-Control: public, max-age=0, must-revalidate
-# ‎סִפְרִיַּית הַקַּלָּטוֹת. ‏/videos — כי Netlify מגישה videos.html גם בלי הסיומת,
+# ‎אוסף קלטות הוידאו של דן. ‏/videos — כי Netlify מגישה videos.html גם בלי הסיומת,
 # ‎וכלל לפי נתיב לא יחול על הכתובת הזו אם לא נכתוב אותה במפורש (כמו "/").
 /videos
   Cache-Control: public, max-age=0, must-revalidate

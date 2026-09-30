@@ -41,5 +41,5 @@ jobs:
         run: python3 tests/csp_check.py http://127.0.0.1:8788
 
       # ‏מרים בעצמו את tests/fakegithub.py (צריך openssl — קיים ב-ubuntu-latest)
-      - name: בדיקות ספריית הקלטות
+      - name: בדיקות אוסף קלטות הוידאו
         run: python3 tests/videos_check.py http://127.0.0.1:8788

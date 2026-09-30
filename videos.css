@@ -1,5 +1,5 @@
 /* ============================================================================
-   סִפְרִיַּית הַקַּלָּטוֹת — גיליון הסגנון
+   אוסף קלטות הוידאו של דן — גיליון הסגנון
    ----------------------------------------------------------------------------
    חנות השכרת וידאו של שנות ה-90: קיר כחול, שלט כרטיס צהוב, מדפי מתכת,
    קופסאות VHS עם מדבקות. ⚠️ הכול בהשראה כללית בלבד — בלי שם, לוגו או
@@ -39,6 +39,47 @@
   --tape-w: 152px;
   color-scheme: light;
 }
+
+/* ---------- 1א. האור כבוי ----------
+   חנות אחרי סגירה: הקיר כהה, רק הניאון והשלט מאירים. בחדר הצפייה —
+   ערב סרט: החדר חשוך והטלוויזיה מטילה אור כחלחל כשהקלטת רצה.
+   ⚠️ צבע הטקסט נשאר בהיר על רקע כהה; מה שמתעמעם הוא המשטחים הגדולים. */
+:root[data-theme="dark"] {
+  --wall:      #0A1A55;
+  --wall-deep: #030822;
+  --metal-hi:  #9DA4AF;
+  --metal:     #6B727D;
+  --metal-lo:  #3E434C;
+  --cream:     #EDE3C4;
+  color-scheme: dark;
+}
+:root[data-theme="dark"] .store {
+  background:
+    radial-gradient(ellipse 55% 30% at 50% 0%, rgba(130,160,255,.08), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 2px, transparent 2px 120px),
+    linear-gradient(var(--wall), var(--wall-deep) 80%);
+}
+:root[data-theme="dark"] .sign { filter: drop-shadow(0 10px 18px rgba(0,0,0,.6)) brightness(.86); }
+:root[data-theme="dark"] .store__open span {
+  text-shadow: 0 0 6px #FF3355, 0 0 18px #FF3355, 0 0 36px #FF335599;
+  box-shadow: 0 0 16px #FF3355cc, 0 0 40px #FF335555, inset 0 0 12px #FF335599;
+}
+:root[data-theme="dark"] .tape { filter: brightness(.82) saturate(.95); }
+:root[data-theme="dark"] .tape:hover,
+:root[data-theme="dark"] .tape:focus-visible { filter: none; }
+:root[data-theme="dark"] .counter__rule { background: #D9CEAC; }
+:root[data-theme="dark"] .room {
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 38%, rgba(120,160,255,.06), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.35) 0 2px, transparent 2px 64px),
+    linear-gradient(90deg, #1C120A, #24170D 30%, #1B1109 60%, #21160D);
+}
+:root[data-theme="dark"] .deck.is-playing:not(.is-fs) .tv {
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.12), inset 0 -3px 0 rgba(0,0,0,.4),
+              0 26px 50px rgba(0,0,0,.6), 0 0 140px 30px rgba(120,170,255,.16);
+}
+:root[data-theme="dark"] .chapters { background:
+    repeating-linear-gradient(transparent 0 33px, rgba(14,44,140,.16) 33px 34px), #E0D6B6; }
 
 /* ---------- 2. יסודות ---------- */
 
@@ -93,6 +134,7 @@ body {
 .store__head {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
+  grid-template-areas: "home sign tools";
   align-items: center;
   gap: 16px;
   padding-block: max(18px, env(safe-area-inset-top)) 10px;
@@ -100,6 +142,7 @@ body {
 }
 
 .store__home {
+  grid-area: home;
   justify-self: start;
   display: inline-flex; align-items: center; gap: .4em;
   color: var(--cream); text-decoration: none; font-weight: 500;
@@ -112,6 +155,7 @@ body {
 /* השלט: כרטיס כניסה צהוב עם חריצים עגולים בצדדים.
    החריצים הם mask של radial-gradient — לא אלמנטים נוספים. */
 .sign {
+  grid-area: sign;
   position: relative;
   text-align: center;
   color: var(--wall);
@@ -131,13 +175,18 @@ body {
 }
 .sign::before { inset-inline-start: 30px; }
 .sign::after  { inset-inline-end: 30px; }
+/* ⚠️ דן: "האותיות צמודות מדי". במשקל 900 האותיות של Rubik כמעט נוגעות זו
+   בזו, והניקוד נדחס ביניהן. מרווח אותיות ומילים, שורה גבוהה שמשאירה
+   מקום לניקוד שמתחת לאותיות, ומשקל 700 — נבדק בגופן האמיתי ולא בגופן
+   החלופי של סביבת הבדיקה. */
 .sign__title {
   margin: 0;
-  font-weight: 900;
+  font-weight: 700;
   font-size: clamp(1.7rem, 4.6vw, 3.1rem);
-  line-height: 1.05;
-  letter-spacing: .01em;
-  text-shadow: 2px 2px 0 #fff6, 3px 3px 0 rgba(7,26,94,.25);
+  line-height: 1.3;
+  letter-spacing: .07em;
+  word-spacing: .12em;
+  text-shadow: 2px 2px 0 #fff6;
 }
 .sign__sub {
   margin: .35em 0 0;
@@ -145,13 +194,89 @@ body {
   color: var(--wall-deep);
 }
 
+.store__tools {
+  grid-area: tools;
+  justify-self: end;
+  display: flex; align-items: center; gap: 18px;
+}
+
+/* אודות: תווית מחיר של השכרה — צהובה, עם חור לחוט ופינה מוטה.
+   ⚠️ שתי שכבות בכוונה: clip-path חותך גם את הצל של filter שעל אותו
+   אלמנט, ולכן הצל על הכפתור והצורה על הפנים שבתוכו. */
+.tag-btn {
+  padding: 0; border: 0; background: none; cursor: pointer;
+  filter: drop-shadow(0 5px 8px rgba(0,0,0,.45));
+  transform: rotate(3deg);
+  transition: transform .18s cubic-bezier(.2,.8,.3,1.3);
+}
+.tag-btn__face {
+  display: inline-flex; align-items: center; gap: .4em;
+  font: 700 1rem/1 var(--font);
+  color: var(--wall);
+  background:
+    radial-gradient(circle 4px at 14px 50%, var(--wall-deep) 96%, transparent) no-repeat,
+    linear-gradient(#FFE266, var(--yellow) 60%, #F2BC00);
+  padding: .65em 1em .65em 1.7em;          /* פיזי: מקום לחור בצד שמאל */
+  clip-path: polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 50%);
+}
+.tag-btn:hover { transform: rotate(-2deg) scale(1.05); }
+.tag-btn:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+.tag-btn .vi { width: 1.15em; height: 1.15em; }
+
+/* מתג אור של קיר: לוחית שמנת עם שני ברגים וידית שעולה ויורדת.
+   aria-pressed="true" = האור דולק, כמו המנורה בספרייה. */
+.switch {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--cream);
+  font: 500 .72rem/1 var(--font);
+  white-space: nowrap;
+}
+.switch__plate {
+  position: relative;
+  width: 34px; height: 52px;
+  border-radius: 6px;
+  background:
+    radial-gradient(circle 2.2px at 50% 7px, #8C8471 60%, transparent 70%),
+    radial-gradient(circle 2.2px at 50% calc(100% - 7px), #8C8471 60%, transparent 70%),
+    linear-gradient(145deg, #FFF8E4, #E6DCC0);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.15), 0 4px 10px rgba(0,0,0,.4);
+}
+.switch__lever {
+  position: absolute; left: 50%; top: 50%;
+  width: 12px; height: 18px; margin: -9px 0 0 -6px;
+  border-radius: 3px;
+  background: linear-gradient(#FFFFFF, #D8CFB4);
+  box-shadow: 0 1px 0 #BDB397, 0 -1px 0 rgba(255,255,255,.7) inset;
+  transition: transform .15s cubic-bezier(.3,1.6,.5,1), background .15s;
+}
+/* דולק: הידית למעלה (כמו מתג אמיתי), והצל מתחתיה */
+.switch[aria-pressed="true"] .switch__lever {
+  transform: translateY(-5px) perspective(40px) rotateX(18deg);
+  box-shadow: 0 5px 3px -2px rgba(0,0,0,.35);
+}
+.switch[aria-pressed="false"] .switch__lever {
+  transform: translateY(5px) perspective(40px) rotateX(-18deg);
+  background: linear-gradient(#D8CFB4, #FFFFFF);
+  box-shadow: 0 -5px 3px -2px rgba(0,0,0,.35);
+}
+.switch:hover .switch__plate { filter: brightness(1.05); }
+.switch:focus-visible { outline: 3px solid var(--yellow); outline-offset: 4px; border-radius: 6px; }
+.switch--mini { flex-direction: row; gap: 8px; }
+.switch--mini .switch__plate { width: 26px; height: 40px; }
+.switch--mini .switch__lever { width: 10px; height: 14px; margin: -7px 0 0 -5px; }
+
 /* שלט "פתוח" בניאון */
-.store__open { justify-self: end; margin: 0; }
+.store__open { margin: 0; }
+/* ⚠️ דן: גם כאן האותיות היו צמודות מדי — אותו תיקון כמו בשלט: מרווח
+   אותיות, משקל 700 במקום 900, ושורה שמשאירה מקום לניקוד. */
 .store__open span {
   display: inline-block;
-  font: 900 1.25rem/1 var(--font);
+  font: 700 1.25rem/1.3 var(--font);
+  letter-spacing: .14em;
   color: #FFE9EC;
   padding: .45em .8em;
+  padding-inline-end: calc(.8em - .14em);   /* המרווח מוסיף רווח אחרי האות האחרונה — מקזזים כדי שהמילה תישאר במרכז */
   border: 3px solid #FF5A73;
   border-radius: 12px;
   text-shadow: 0 0 6px #FF3355, 0 0 14px #FF3355;
@@ -225,6 +350,13 @@ body {
   line-height: 1.5;
 }
 .counter__rule strong { display: block; color: var(--red); font-weight: 900; font-size: 1.1rem; }
+/* ‏הקריצה: "נא להחזיר מגולגל" הוא בדיחה — אין כאן קלטות פיזיות להחזיר */
+.wink {
+  display: inline-block;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  font-weight: 400;
+  transform: rotate(-8deg);
+}
 
 .store__foot {
   text-align: center;
@@ -379,13 +511,13 @@ body {
   width: 100%; max-width: 1320px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  grid-template-areas: "tv  ch" "vcr ch";
+  grid-template-areas: "tv  ch" "vcr ch" "note ch";
   gap: 18px 26px;
   align-content: start;
 }
 .deck:has(.chapters[data-open="false"]) {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "tv" "vcr";
+  grid-template-areas: "tv" "vcr" "note";
   max-width: 1000px;
 }
 
@@ -623,6 +755,33 @@ body {
 .vcr__sep { width: 1px; height: 28px; background: rgba(255,255,255,.12); margin-inline: 4px; }
 .vcr__vol { width: 90px; accent-color: var(--yellow); }
 
+/* הערה לצופים: תווית אזהרה קטנה מתחת למכשיר, בסגנון המדבקות שעל קלטות */
+.notice {
+  grid-area: note;
+  justify-self: center;
+  width: 100%; max-width: 820px;
+  margin: 0;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px;
+  font-size: .9rem; line-height: 1.55;
+  color: var(--cream);
+  background: rgba(0,0,0,.32);
+  border: 1px dashed rgba(255,210,31,.45);
+  border-radius: 6px;
+}
+.notice strong { color: var(--yellow); font-weight: 700; }
+.notice__badge {
+  flex: none;
+  width: 22px; height: 22px; margin-top: 1px;
+  display: grid; place-items: center;
+  font: 900 .85rem/1 var(--font);
+  color: var(--ink);
+  background: var(--yellow);
+  border-radius: 50%;
+}
+.notice__link { color: var(--yellow); font-weight: 700; }
+.notice__link:hover { color: #fff; }
+
 /* ---------- 8. פרקים: כרטיס הקרטון שבתוך קופסת הקלטת ---------- */
 
 .chapters {
@@ -680,7 +839,7 @@ body {
   padding: 0; border-radius: 0; background: #000; box-shadow: none;
 }
 .deck.is-fs .tv__screen { aspect-ratio: auto; height: 100%; border-radius: 0; box-shadow: none; }
-.deck.is-fs .tv__brand { display: none; }
+.deck.is-fs .tv__brand, .deck.is-fs .notice { display: none; }
 .deck.is-fs .vcr {
   position: absolute; inset-inline: 0; bottom: 0;
   max-width: none; border-radius: 0;
@@ -767,12 +926,61 @@ body {
   box-shadow: 0 2px 0 #9A8F6A;
 }
 
+/* אודות: גב של קופסת קלטת */
+.about {
+  border: 0;
+  border-radius: 6px;
+  padding: 0 28px 24px;
+  width: min(600px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  color: var(--cream);
+  background:
+    linear-gradient(160deg, #1B3FA0, var(--wall) 45%, var(--wall-deep));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.15), 0 30px 60px rgba(0,0,0,.6);
+  font-family: var(--font);
+}
+.about::backdrop { background: rgba(3,8,30,.72); }
+.about__band {
+  margin: 0 -28px 18px;
+  text-align: center;
+  background: #0A0A0A;
+  color: var(--yellow);
+  font: 900 .9rem/1 var(--font);
+  letter-spacing: .3em;
+  padding: .8em 0 .75em;
+  border-bottom: 4px solid var(--yellow);
+}
+.about__title {
+  margin: 0 0 12px;
+  color: var(--yellow);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  letter-spacing: .04em;
+  text-shadow: 2px 2px 0 rgba(0,0,0,.35);
+}
+.about__text { line-height: 1.7; font-size: 1.02rem; }
+.about__text p { margin: 0 0 .9em; }
+.about__lead { font-weight: 700; font-size: 1.1em; }
+.about__rating {
+  position: absolute; top: 52px; left: 22px;      /* פיזי: פינה שמאלית, כמו דירוג על קופסה */
+  margin: 0;
+  width: 58px; height: 58px; border-radius: 50%;
+  display: grid; place-items: center; text-align: center;
+  font: 900 .62rem/1.05 var(--font);
+  color: var(--ink);
+  background: var(--cream);
+  border: 3px solid var(--red);
+  transform: rotate(-12deg);
+}
+.about form { margin-top: 8px; }
+
 /* ---------- 12. נייד ונגישות ---------- */
 
 @media (max-width: 900px) {
   .deck, .deck:has(.chapters[data-open="false"]) {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "tv" "vcr" "ch";
+    grid-template-areas: "tv" "vcr" "note" "ch";
   }
   .chapters { max-height: none; }
   .tv { min-width: 0; max-width: none; }
@@ -780,9 +988,15 @@ body {
 
 @media (max-width: 720px) {
   :root { --tape-w: 124px; --gap: 16px; }
-  .store__head { grid-template-columns: 1fr; justify-items: center; }
-  .store__home { justify-self: stretch; justify-content: center; }
+  .store__head {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "home tools" "sign sign";
+  }
+  .sign { justify-self: center; }
   .store__open { display: none; }
+  .about { padding: 0 18px 20px; }
+  .about__band { margin-inline: -18px; }
+  .about__rating { display: none; }
   .sign { padding-inline: 40px; }
   .sign::before { inset-inline-start: 22px; }
   .sign::after  { inset-inline-end: 22px; }
@@ -798,6 +1012,9 @@ body {
   }
   .rack__row > li { scroll-snap-align: center; }
   .tape__title { font-size: .98rem; }
+  /* ⚠️ בקופסה הצרה המדבקה בגודל המלא ישבה על שם הקלטת ("ן, חברה") */
+  .sticker--new { top: 22px; right: 2px; width: 44px; height: 44px; font-size: .78rem; }
+  .tape__meta { white-space: nowrap; font-size: .66rem; padding-inline: .55em; }
 
   .room__bar .knob-btn span { display: none; }
   .room__bar .knob-btn { padding: .55em; }
@@ -811,6 +1028,7 @@ body {
   .vbtn--play { width: 56px; }
   .vcr__sep { display: none; }
   [data-act="keys"] { display: none; }        /* אין מקלדת במסך מגע */
+  .switch--mini .switch__label { display: none; }   /* יש aria-label; בסרגל הצר אין מקום לכיתוב */
 }
 
 /* בטלפון עוצמת הקול נשלטת בכפתורים הפיזיים. ב-iOS volume אפילו אינו ניתן לכתיבה. */

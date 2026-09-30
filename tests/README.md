@@ -12,7 +12,7 @@ python3 -m playwright install chromium
 python3 tests/cspserve.py &          # מ-שורש המאגר
 python3 tests/verify.py              # 180 בדיקות זרימה בספרייה
 python3 tests/csp_check.py           # CSP ורינדור, בארבעת הספרים
-python3 tests/videos_check.py        # סִפְרִיַּית הַקַּלָּטוֹת (מפעיל לבד את fakegithub.py)
+python3 tests/videos_check.py        # אוסף קלטות הוידאו של דן (מפעיל לבד את fakegithub.py)
 ```
 
 ## הנגן: GitHub מדומה (`fakegithub.py`)
