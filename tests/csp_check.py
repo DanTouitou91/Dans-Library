@@ -4,7 +4,11 @@ import sys
 from playwright.sync_api import sync_playwright
 from PIL import Image
 import os
+import tempfile
 EXE=os.environ.get("DL_CHROME","")
+# ‏⚠️ צילומי המסך נכתבים לתיקייה זמנית. כשהם נכתבו לתיקייה הנוכחית (שורש
+# ‏המאגר) ארבעה קובצי PNG נכנסו בטעות ל-git — ומשם גם לאתר המפורסם.
+SHOT=os.environ.get("DL_SHOTS", tempfile.mkdtemp(prefix="dl-csp-shots-"))
 BASE=sys.argv[1] if len(sys.argv)>1 else "http://127.0.0.1:8788"
 fails=[]
 def check(l,c,d=""):
@@ -33,8 +37,9 @@ with sync_playwright() as pw:
       check(f"leaves have real on-screen size [{bid}]", box["visibleLeaves"] >= 1,
             f"visible={box['visibleLeaves']} maxW={box['maxW']}")
 
-      p.screenshot(path=f"csp_after_{bid}.png")
-      im = Image.open(f"csp_after_{bid}.png").convert("RGB")
+      shot = os.path.join(SHOT, f"csp_after_{bid}.png")
+      p.screenshot(path=shot)
+      im = Image.open(shot).convert("RGB")
       stage = im.crop((0, 120, im.width, im.height))          # below the toolbar
       colors = stage.getcolors(maxcolors=1_000_000) or []
       top = max(colors)[0] / (stage.width*stage.height) if colors else 1

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>סִפְרִיַּית הַקַּלָּטוֹת · אוסף ספרי הלמידה של דן</title>
+<meta name="description" content="הסרטונים של דן מתוך ספרי הלימוד — מדף קלטות וידאו, מכשיר וידאו וטלוויזיה של פעם.">
+<meta name="theme-color" content="#0E2C8C">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/favicon.svg">
+
+<!-- Rubik: שלטים וכיתוב קופסאות (עברית עבה ועגולה, אופי של חנות שנות ה-90).
+     VT323: תצוגת ה-OSD הירוקה ושעון המכשיר (ספרות בלבד — העברית נופלת ל-Rubik). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=VT323&display=swap">
+
+<link rel="stylesheet" href="videos.css?v=1">
+</head>
+<body>
+
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="v-play" viewBox="0 0 24 24"><path d="M7.5 5v14l11-7z"/></symbol>
+    <symbol id="v-pause" viewBox="0 0 24 24"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></symbol>
+    <symbol id="v-rew" viewBox="0 0 24 24"><path d="M11.5 6v12L3 12zM21 6v12l-8.5-6z"/></symbol>
+    <symbol id="v-ff" viewBox="0 0 24 24"><path d="M12.5 6v12L21 12zM3 6v12l8.5-6z"/></symbol>
+    <symbol id="v-prev" viewBox="0 0 24 24"><path d="M5 5h2.6v14H5zM19.5 5v14L8.5 12z"/></symbol>
+    <symbol id="v-next" viewBox="0 0 24 24"><path d="M16.4 5H19v14h-2.6zM4.5 5v14l11-7z"/></symbol>
+    <symbol id="v-vol" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="v-wave" d="M15 9a4 4 0 0 1 0 6M17.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="v-mute" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="m15.5 9.5 5 5m0-5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="v-full" viewBox="0 0 24 24"><path d="M4.5 9.5v-5h5M19.5 9.5v-5h-5M4.5 14.5v5h5M19.5 14.5v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="v-list" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="4.6" cy="6.5" r="1.4"/><circle cx="4.6" cy="12" r="1.4"/><circle cx="4.6" cy="17.5" r="1.4"/></symbol>
+    <symbol id="v-eject" viewBox="0 0 24 24"><path d="M12 5 20 14H4zM4 16.5h16V19H4z"/></symbol>
+    <symbol id="v-rewind-all" viewBox="0 0 24 24"><path d="M5 5h2.4v14H5zM14 6v12l-6-6zM21 6v12l-6-6z"/></symbol>
+    <symbol id="v-keys" viewBox="0 0 24 24"><rect x="2.8" y="6.5" width="18.4" height="11" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6.4 10h.01M9.6 10h.01M12.8 10h.01M16 10h.01M17.6 13.2h.01M6.4 13.2h.01M9.2 13.9h5.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+    <symbol id="v-back" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5M4.5 12H15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<div id="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ============================================================
+     מצב 1 — החנות: שלט, מדפים, קלטות
+     ============================================================ -->
+<div id="store-view" class="view store" tabindex="-1">
+  <header class="store__head">
+    <a class="store__home" href="./">
+      <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-back"/></svg>
+      <span>חזרה לספרייה</span>
+    </a>
+
+    <div class="sign">
+      <h1 class="sign__title">סִפְרִיַּית הַקַּלָּטוֹת</h1>
+      <p class="sign__sub">השכרת וידאו · הסרטונים של דן מתוך ספרי הלימוד</p>
+    </div>
+
+    <p class="store__open" aria-hidden="true"><span>פָּתוּחַ</span></p>
+  </header>
+
+  <main class="aisle" id="aisle" aria-label="מדפי הקלטות">
+    <!-- המדפים מוזרקים כאן מתוך tapes.json -->
+  </main>
+
+  <aside class="counter" aria-label="דלפק ההשכרה">
+    <p class="counter__rule">
+      <strong>נָא לְהַחֲזִיר מְגֻלְגָּל!</strong>
+      קלטת שלא סיימתם מקבלת מדבקה, והצפייה תמשיך בדיוק מאיפה שעצרתם.
+    </p>
+  </aside>
+
+  <footer class="store__foot">
+    <p>האתר נוצר על ידי דן טואיטו, צפייה מהנה!</p>
+  </footer>
+</div>
+
+<!-- ============================================================
+     מצב 2 — חדר הצפייה: טלוויזיה, מכשיר וידאו, פרקים
+     ============================================================ -->
+<div id="player-view" class="view room" hidden tabindex="-1">
+  <header class="room__bar">
+    <button type="button" class="knob-btn" data-act="back">
+      <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-back"/></svg>
+      <span>חזרה למדף</span>
+    </button>
+    <h2 class="room__title" id="tape-title"></h2>
+    <button type="button" class="knob-btn knob-btn--icon" data-act="keys" aria-haspopup="dialog"
+            aria-label="קיצורי מקלדת" title="קיצורי מקלדת">
+      <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-keys"/></svg>
+    </button>
+  </header>
+
+  <div class="room__body">
+    <!-- ⚠️ #deck הוא מה שעובר למסך מלא — ולא ה-<video>. רק כך תצוגת ה-OSD,
+         הפקדים ורשימת הפרקים נשארים זמינים גם במסך מלא. -->
+    <section class="deck" id="deck" aria-labelledby="tape-title">
+      <div class="tv">
+        <div class="tv__screen" data-screen>
+          <video class="tv__video" playsinline preload="metadata" tabindex="-1"></video>
+          <canvas class="tv__static" width="160" height="120" aria-hidden="true"></canvas>
+          <span class="tv__flash" aria-hidden="true"></span>
+          <span class="tv__scan" aria-hidden="true"></span>
+          <span class="tv__glass" aria-hidden="true"></span>
+          <p class="osd" data-osd aria-hidden="true"></p>
+          <p class="osd osd--corner" data-osd-mode aria-hidden="true"></p>
+
+          <button type="button" class="tv__prompt" data-act="play-prompt" hidden>
+            <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-play"/></svg>
+            <span data-prompt-label>הפעלה</span>
+          </button>
+
+          <div class="tv__fault" data-fault hidden role="alert">
+            <p class="tv__fault-title">הקלטת נתקעה</p>
+            <p class="tv__fault-text" data-fault-text>לא הצלחנו לטעון את הסרטון.</p>
+            <button type="button" class="knob-btn" data-act="retry">לנסות שוב</button>
+          </div>
+        </div>
+        <div class="tv__brand" aria-hidden="true">
+          <span class="tv__logo">טֶלֶוִויזְיָה צִבְעוֹנִית</span>
+          <span class="tv__knobs"><i></i><i></i></span>
+        </div>
+      </div>
+
+      <!-- מכשיר הווידאו. ⚠️ dir="ltr" בכוונה: זה חפץ פיזי עם כפתורים
+           מודפסים, וציר הזמן של סרטון זורם משמאל לימין גם בעברית.
+           חצים ←/→ במקלדת תואמים לכיוון הזה. -->
+      <div class="vcr" dir="ltr">
+        <div class="vcr__top">
+          <div class="vcr__slot" data-slot aria-hidden="true"><span class="vcr__flap"></span></div>
+          <div class="vcr__display" aria-hidden="true">
+            <span class="vcr__led" data-led></span>
+            <span class="vcr__clock" data-clock>--:--</span>
+          </div>
+        </div>
+
+        <div class="vcr__track" data-track>
+          <input type="range" class="vcr__seek" data-seek min="0" max="0" step="0.1" value="0"
+                 aria-label="מיקום בסרטון" aria-valuetext="0:00">
+          <div class="vcr__ticks" data-ticks aria-hidden="true"></div>
+        </div>
+
+        <div class="vcr__buttons" role="group" aria-label="פקדי הניגון">
+          <button type="button" class="vbtn" data-act="prev-ch" aria-label="לפרק הקודם" title="לפרק הקודם ([)">
+            <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-prev"/></svg></button>
+          <button type="button" class="vbtn" data-act="rew" aria-label="10 שניות אחורה" title="10 שניות אחורה (←)">
+            <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-rew"/></svg></button>
+          <button type="button" class="vbtn vbtn--play" data-act="play" aria-label="ניגון" title="ניגון / השהיה (רווח)">
+            <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-play" data-play-icon/></svg></button>
+          <button type="button" class="vbtn" data-act="ff" aria-label="10 שניות קדימה" title="10 שניות קדימה (→)">
+            <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-ff"/></svg></button>
+          <button type="button" class="vbtn" data-act="next-ch" aria-label="לפרק הבא" title="לפרק הבא (])">
+            <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-next"/></svg></button>
+
+          <span class="vcr__sep" aria-hidden="true"></span>
+
+          <button type="button" class="vbtn" data-act="mute" aria-label="השתקה" aria-pressed="false" title="השתקה (M)">
+            <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-vol" data-vol-icon/></svg></button>
+          <input type="range" class="vcr__vol" data-vol min="0" max="1" step="0.05" value="1" aria-label="עוצמת קול">
+
+          <span class="vcr__sep" aria-hidden="true"></span>
+
+          <button type="button" class="vbtn" data-act="chapters" aria-label="רשימת הפרקים" aria-expanded="false"
+                  aria-controls="chapters" title="פרקים (C)">
+            <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-list"/></svg></button>
+          <button type="button" class="vbtn" data-act="fullscreen" aria-label="מסך מלא" title="מסך מלא (F)">
+            <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-full"/></svg></button>
+          <button type="button" class="vbtn" data-act="rewind-all" aria-label="גלגול לאחור לתחילת הקלטת" title="גלגול לאחור">
+            <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-rewind-all"/></svg></button>
+          <button type="button" class="vbtn" data-act="back" aria-label="הוצאת הקלטת וחזרה למדף" title="הוצאה (Esc)">
+            <svg class="vi" aria-hidden="true" focusable="false"><use href="#v-eject"/></svg></button>
+        </div>
+      </div>
+
+      <nav class="chapters" id="chapters" aria-label="פרקי הקלטת" data-open="false">
+        <h3 class="chapters__title">פרקים</h3>
+        <ol class="chapters__list" data-chapter-list></ol>
+        <p class="chapters__empty" data-chapter-empty hidden>בקלטת הזו אין חלוקה לפרקים.</p>
+      </nav>
+    </section>
+  </div>
+</div>
+
+<!-- חלונית קיצורי המקלדת. <dialog> מקורי: מלכוד פוקוס, Esc והחזרת
+     הפוקוס מגיעים מהדפדפן, בלי מנגנון שכבות משלנו. -->
+<dialog class="keys" id="keys-dialog" aria-labelledby="keys-title">
+  <h2 id="keys-title">קיצורי מקלדת</h2>
+  <dl class="keys__list" data-keys-list></dl>
+  <form method="dialog"><button class="knob-btn" autofocus>סגירה</button></form>
+</dialog>
+
+<script src="videos.js?v=1" defer></script>
+
+<!-- Google Analytics — כמו בספרייה. ⚠️ הקוד המוטבע יושב ב-assets/analytics.js
+     ולא כאן, כי ל-script-src אין 'unsafe-inline'. -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-PNNQZ1Y4MP"></script>
+<script src="assets/analytics.js?v=1" defer></script>
+</body>
+</html>

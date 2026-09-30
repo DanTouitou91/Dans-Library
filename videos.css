@@ -1,0 +1,829 @@
+/* ============================================================================
+   סִפְרִיַּית הַקַּלָּטוֹת — גיליון הסגנון
+   ----------------------------------------------------------------------------
+   חנות השכרת וידאו של שנות ה-90: קיר כחול, שלט כרטיס צהוב, מדפי מתכת,
+   קופסאות VHS עם מדבקות. ⚠️ הכול בהשראה כללית בלבד — בלי שם, לוגו או
+   צבעים מדויקים של רשת אמיתית כלשהי (סימנים מסחריים רשומים).
+
+   מבנה:  1. טוקנים   2. יסודות   3. החנות   4. הקופסאות   5. חדר הצפייה
+          6. טלוויזיה  7. מכשיר הווידאו  8. פרקים  9. מסך מלא
+          10. הקלטת באנימציה  11. דיאלוג  12. נייד ונגישות
+
+   ⚠️ כיווניות: כמו בספרייה — מאפיינים לוגיים מתהפכים ב-RTL, אבל
+   transform, left/right ו-linear-gradient(to right) תמיד פיזיים. מכשיר
+   הווידאו ופס הזמן הם dir="ltr" בכוונה (ראו videos.html), ושם left פיזי
+   הוא הנכון.
+   ============================================================================ */
+
+/* ---------- 1. טוקנים ---------- */
+
+:root {
+  --wall:        #0E2C8C;
+  --wall-deep:   #071A5E;
+  --yellow:      #FFD21F;
+  --yellow-dk:   #D9A400;
+  --red:         #D7263D;
+  --cream:       #FFF6D6;
+  --ink:         #0B1026;
+  --metal-hi:    #E3E7EE;
+  --metal:       #A9B0BC;
+  --metal-lo:    #6E7682;
+  --osd:         #6BFF8A;
+  --room:        #1A120C;
+  --plastic:     #1C1F25;
+
+  --font: 'Rubik', 'Miriam Libre', system-ui, sans-serif;
+  --font-osd: 'VT323', 'Rubik', ui-monospace, monospace;
+
+  --gap: 22px;
+  --tape-w: 152px;
+  color-scheme: light;
+}
+
+/* ---------- 2. יסודות ---------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  font-family: var(--font);
+  color: var(--cream);
+  background: var(--wall-deep);
+  -webkit-font-smoothing: antialiased;
+}
+[hidden] { display: none !important; }
+
+.svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.sr-only {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.vi { width: 1.25em; height: 1.25em; fill: currentColor; flex: none; }
+
+:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+.view:focus { outline: none; }
+
+.knob-btn {
+  display: inline-flex; align-items: center; gap: .45em;
+  font: 700 .95rem/1 var(--font);
+  color: var(--ink);
+  background: linear-gradient(#FFE266, var(--yellow) 55%, var(--yellow-dk));
+  border: 0; border-radius: 999px;
+  padding: .62em 1.1em;
+  box-shadow: 0 2px 0 #8A6A00, 0 6px 14px rgba(0,0,0,.35);
+  cursor: pointer;
+  text-decoration: none;
+}
+.knob-btn:hover { filter: brightness(1.06); }
+.knob-btn:active { transform: translateY(2px); box-shadow: 0 0 0 #8A6A00, 0 3px 8px rgba(0,0,0,.35); }
+.knob-btn--icon { padding: .55em; }
+
+/* ---------- 3. החנות ---------- */
+
+.store {
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+  /* קיר כחול עם פסי תאורה מהתקרה, ורצפת שטיח בתחתית */
+  background:
+    radial-gradient(ellipse 70% 40% at 50% 0%, rgba(255,255,255,.16), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 2px, transparent 2px 120px),
+    linear-gradient(var(--wall), var(--wall-deep) 88%);
+  padding-inline: max(16px, env(safe-area-inset-left), env(safe-area-inset-right));
+}
+
+.store__head {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding-block: max(18px, env(safe-area-inset-top)) 10px;
+  max-width: 1200px; width: 100%; margin-inline: auto;
+}
+
+.store__home {
+  justify-self: start;
+  display: inline-flex; align-items: center; gap: .4em;
+  color: var(--cream); text-decoration: none; font-weight: 500;
+  padding: .5em .8em; border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.18);
+}
+.store__home:hover { background: rgba(255,255,255,.16); }
+
+/* השלט: כרטיס כניסה צהוב עם חריצים עגולים בצדדים.
+   החריצים הם mask של radial-gradient — לא אלמנטים נוספים. */
+.sign {
+  position: relative;
+  text-align: center;
+  color: var(--wall);
+  background: linear-gradient(#FFE066, var(--yellow) 60%, #F2BC00);
+  padding: 14px 54px 12px;
+  border-radius: 10px;
+  -webkit-mask: radial-gradient(circle 16px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+                radial-gradient(circle 16px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+          mask: radial-gradient(circle 16px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+                radial-gradient(circle 16px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  filter: drop-shadow(0 10px 18px rgba(0,0,0,.45));
+  transform: rotate(-1.2deg);
+}
+.sign::before, .sign::after {         /* קו מנוקב של כרטיס */
+  content: ''; position: absolute; inset-block: 12px;
+  border-inline-start: 2px dashed rgba(14,44,140,.35);
+}
+.sign::before { inset-inline-start: 30px; }
+.sign::after  { inset-inline-end: 30px; }
+.sign__title {
+  margin: 0;
+  font-weight: 900;
+  font-size: clamp(1.7rem, 4.6vw, 3.1rem);
+  line-height: 1.05;
+  letter-spacing: .01em;
+  text-shadow: 2px 2px 0 #fff6, 3px 3px 0 rgba(7,26,94,.25);
+}
+.sign__sub {
+  margin: .35em 0 0;
+  font-weight: 700; font-size: clamp(.78rem, 1.6vw, .95rem);
+  color: var(--wall-deep);
+}
+
+/* שלט "פתוח" בניאון */
+.store__open { justify-self: end; margin: 0; }
+.store__open span {
+  display: inline-block;
+  font: 900 1.25rem/1 var(--font);
+  color: #FFE9EC;
+  padding: .45em .8em;
+  border: 3px solid #FF5A73;
+  border-radius: 12px;
+  text-shadow: 0 0 6px #FF3355, 0 0 14px #FF3355;
+  box-shadow: 0 0 10px #FF3355aa, inset 0 0 10px #FF335588;
+  animation: neon 6s infinite;
+}
+@keyframes neon {
+  0%, 92%, 96%, 100% { opacity: 1; }
+  94% { opacity: .55; }
+}
+
+.aisle {
+  flex: 1;
+  width: 100%; max-width: 1200px; margin-inline: auto;
+  padding-block: 18px 8px;
+}
+
+.rack { margin-block: 26px 36px; }
+.rack__label {
+  display: inline-block;
+  margin: 0 0 18px;
+  font-weight: 900; font-size: 1.05rem;
+  color: var(--ink);
+  background: var(--yellow);
+  padding: .35em 1em;
+  border-radius: 4px;
+  box-shadow: 0 3px 0 var(--yellow-dk), 0 8px 16px rgba(0,0,0,.3);
+  transform: rotate(-1deg);
+}
+
+.rack__row {
+  list-style: none; margin: 0; padding: 0 var(--gap);
+  display: flex; flex-wrap: wrap; gap: 30px var(--gap);
+}
+/* מדף מתכת מתחת לכל קופסה. הוא רחב מהקופסה בחצי מרווח לכל צד, ולכן
+   מדפים של קופסאות סמוכות מתחברים לפס רציף אחד. */
+.rack__row > li {
+  position: relative;
+  padding-bottom: 16px;
+}
+.rack__row > li::after {
+  content: '';
+  position: absolute;
+  inset-inline: calc(var(--gap) / -2 - 1px);
+  bottom: 0; height: 16px;
+  background: linear-gradient(var(--metal-hi), var(--metal) 45%, var(--metal-lo));
+  box-shadow: 0 8px 14px rgba(0,0,0,.45);
+  border-radius: 2px;
+}
+
+.aisle__note {
+  margin: 20px var(--gap) 0;
+  font-size: 1.05rem; color: var(--cream);
+}
+.aisle__note--error a { color: var(--yellow); }
+
+.counter {
+  width: 100%; max-width: 1200px; margin: 10px auto 0;
+}
+.counter__rule {
+  margin: 0 var(--gap);
+  display: inline-block;
+  max-width: 560px;
+  color: var(--ink);
+  background: var(--cream);
+  padding: .8em 1.1em;
+  border-radius: 6px;
+  border-inline-start: 8px solid var(--red);
+  box-shadow: 0 8px 18px rgba(0,0,0,.35);
+  transform: rotate(.6deg);
+  line-height: 1.5;
+}
+.counter__rule strong { display: block; color: var(--red); font-weight: 900; font-size: 1.1rem; }
+
+.store__foot {
+  text-align: center;
+  padding-block: 28px max(24px, env(safe-area-inset-bottom));
+  color: rgba(255,246,214,.75);
+  font-size: .92rem;
+}
+.store__foot p { margin: 0; }
+
+/* ---------- 4. קופסאות הקלטות ---------- */
+
+.tape {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  width: var(--tape-w);
+  aspect-ratio: 104 / 187;                 /* קופסת VHS אמיתית */
+  padding: 0 10px 12px;
+  border: 0; border-radius: 3px;
+  font-family: var(--font);
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  background:
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--tape-colour, #1B3FA0) 70%, #fff) 0%,
+      var(--tape-colour, #1B3FA0) 42%,
+      color-mix(in srgb, var(--tape-colour, #1B3FA0) 55%, #000) 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.18),
+    inset -6px 0 0 rgba(0,0,0,.18),          /* פיזי: עובי הקופסה בצד ימין */
+    0 10px 18px rgba(0,0,0,.45);
+  transition: transform .22s cubic-bezier(.2,.8,.3,1.2), box-shadow .22s;
+  overflow: hidden;
+}
+/* ברק של שרוול הניילון */
+.tape::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.22) 38%, transparent 46%,
+                                       transparent 70%, rgba(255,255,255,.12) 74%, transparent 80%);
+}
+.tape:hover, .tape:focus-visible {
+  transform: translateY(-10px) rotate(-1deg);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), inset -6px 0 0 rgba(0,0,0,.18),
+              0 18px 26px rgba(0,0,0,.5), 0 0 0 3px var(--yellow);
+}
+.tape:focus-visible { outline: none; }
+
+.tape__band {
+  align-self: stretch;
+  margin-inline: -10px;
+  background: #0A0A0A;
+  color: var(--yellow);
+  font: 900 .8rem/1 var(--font);
+  letter-spacing: .18em;
+  padding: .55em 0 .5em;
+  border-bottom: 3px solid var(--yellow);
+}
+.tape__title {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900;
+  font-size: 1.12rem;
+  line-height: 1.2;
+  text-shadow: 0 2px 0 rgba(0,0,0,.35), 0 0 14px rgba(0,0,0,.25);
+  overflow-wrap: anywhere;
+  padding-block: 8px 2px;
+}
+.tape__sub {
+  font-size: .78rem; line-height: 1.3; opacity: .92;
+  margin-bottom: 8px;
+}
+.tape__meta {
+  font-size: .74rem; font-weight: 700;
+  background: rgba(0,0,0,.35);
+  padding: .3em .7em; border-radius: 999px;
+}
+.tape__badge {
+  position: absolute; top: 40px; left: 8px;        /* פיזי: פינה שמאלית, מתחת לפס. בתחתית הוא עלה על שורת האורך */
+  font: 400 .95rem/1 var(--font-osd);
+  letter-spacing: .08em;
+  color: #fff; border: 1.5px solid #fff; padding: 1px 4px; border-radius: 2px;
+  opacity: .8;
+}
+.tape--blank {
+  --tape-colour: #4A5068;
+  cursor: default; opacity: .55;
+  filter: grayscale(.6);
+}
+
+.sticker {
+  position: absolute;
+  font-weight: 900; line-height: 1;
+  pointer-events: none;
+}
+.sticker--new {
+  top: 34px; right: -6px;
+  width: 58px; height: 58px;
+  display: grid; place-items: center;
+  font-size: .95rem;
+  color: var(--ink);
+  background: var(--yellow);
+  transform: rotate(14deg);
+  clip-path: polygon(50% 0,61% 13%,78% 6%,80% 23%,97% 25%,89% 40%,100% 52%,86% 62%,92% 79%,75% 80%,69% 97%,54% 88%,40% 100%,33% 84%,15% 89%,16% 71%,0 62%,12% 49%,3% 32%,20% 27%,21% 9%,37% 14%);
+}
+.sticker--rewind {
+  bottom: 44px; left: -4px; right: -4px;
+  font-size: .78rem;
+  color: #fff;
+  background: var(--red);
+  padding: .45em 0;
+  transform: rotate(-8deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,.4);
+}
+
+/* ---------- 5. חדר הצפייה ---------- */
+
+.room {
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+  color: var(--cream);
+  color-scheme: dark;
+  /* קיר עץ של סלון משנות ה-80 */
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 38%, rgba(255,210,140,.10), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.28) 0 2px, transparent 2px 64px),
+    linear-gradient(90deg, #3B2616, #4A301C 30%, #3A2415 60%, #45301E);
+  padding-inline: max(16px, env(safe-area-inset-left), env(safe-area-inset-right));
+  animation: room-in .35s ease-out;
+}
+@keyframes room-in { from { opacity: 0; } }
+
+.room__bar {
+  display: flex; align-items: center; gap: 12px;
+  padding-block: max(14px, env(safe-area-inset-top)) 6px;
+  max-width: 1320px; width: 100%; margin-inline: auto;
+}
+.room__title {
+  flex: 1; margin: 0;
+  font-weight: 900; font-size: clamp(1.05rem, 2.6vw, 1.5rem);
+  text-align: center;
+  text-shadow: 0 2px 0 rgba(0,0,0,.5);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.room__body {
+  flex: 1;
+  display: flex; justify-content: center;
+  padding-block: 10px max(24px, env(safe-area-inset-bottom));
+}
+
+.deck {
+  width: 100%; max-width: 1320px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-areas: "tv  ch" "vcr ch";
+  gap: 18px 26px;
+  align-content: start;
+}
+.deck:has(.chapters[data-open="false"]) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "tv" "vcr";
+  max-width: 1000px;
+}
+
+/* ---------- 6. הטלוויזיה ---------- */
+
+.tv {
+  grid-area: tv;
+  justify-self: center;
+  width: 100%;
+  max-width: calc((100dvh - 260px) * 16 / 9 + 56px);   /* שלא תדחוף את המכשיר אל מתחת לקפל */
+  min-width: min(100%, 520px);
+  padding: 22px 22px 12px;
+  border-radius: 28px;
+  background:
+    repeating-linear-gradient(88deg, rgba(0,0,0,.18) 0 3px, transparent 3px 9px),
+    linear-gradient(#5A3B24, #3C2615 70%, #2E1C0F);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.12), inset 0 -3px 0 rgba(0,0,0,.4),
+              0 26px 50px rgba(0,0,0,.6);
+}
+
+.tv__screen {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #050505;
+  border-radius: 22px / 28px;
+  overflow: hidden;
+  box-shadow: 0 0 0 8px #1A1512, 0 0 0 10px #0B0907, inset 0 0 40px #000;
+  cursor: pointer;
+  isolation: isolate;
+}
+.tv__video {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; background: #000;
+}
+.tv__static {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  image-rendering: pixelated;
+  opacity: 0; transition: opacity .35s;
+  z-index: 1;
+  pointer-events: none;
+}
+.tv__static.is-on { opacity: .85; }
+.tv__flash {
+  position: absolute; inset: 0; z-index: 2;
+  background: radial-gradient(ellipse at center, #fff, #cfe8ff 60%, transparent 90%);
+  opacity: 0; pointer-events: none;
+}
+.tv__scan {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: repeating-linear-gradient(rgba(0,0,0,.16) 0 1px, transparent 1px 3px);
+  opacity: .45;
+}
+.tv__glass {
+  position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(ellipse 80% 60% at 30% 18%, rgba(255,255,255,.10), transparent 60%);
+  box-shadow: inset 0 0 80px rgba(0,0,0,.65), inset 0 0 12px rgba(0,0,0,.8);
+}
+
+.osd {
+  position: absolute; z-index: 5; margin: 0;
+  font-family: var(--font-osd);
+  color: var(--osd);
+  text-shadow: 0 0 6px rgba(107,255,138,.7), 2px 2px 0 #000, -1px -1px 0 #000;
+  opacity: 0; transition: opacity .18s;
+  pointer-events: none;
+  direction: ltr;
+}
+.osd.is-on { opacity: 1; }
+/* פיזי: OSD של מכשיר וידאו יושב תמיד בצד שמאל, גם בעברית */
+.osd:not(.osd--corner) {
+  left: 5%; bottom: 9%;
+  display: flex; flex-direction: column; align-items: flex-start; gap: .1em;
+  font-size: clamp(1.4rem, 3.6vw, 2.6rem);
+  max-width: 80%;
+}
+.osd__ch { letter-spacing: .06em; }
+.osd__title {
+  font-family: var(--font); font-weight: 700;
+  font-size: .62em;
+  direction: rtl; unicode-bidi: plaintext;
+}
+.osd--corner {
+  left: 5%; top: 7%;
+  font-size: clamp(1.3rem, 3vw, 2.2rem);
+  letter-spacing: .06em;
+}
+
+.tv__prompt {
+  position: absolute; z-index: 6; inset: 0; margin: auto;
+  width: fit-content; height: fit-content;
+  display: inline-flex; align-items: center; gap: .5em;
+  font: 900 clamp(1.05rem, 2.6vw, 1.5rem)/1 var(--font);
+  color: var(--yellow);
+  background: rgba(14,44,140,.92);
+  border: 3px solid var(--yellow);
+  border-radius: 10px;
+  padding: .75em 1.4em;
+  box-shadow: 0 0 0 6px rgba(0,0,0,.35), 0 12px 30px rgba(0,0,0,.6);
+  cursor: pointer;
+}
+.tv__prompt:hover { background: rgba(20,58,176,.95); }
+
+/* "המסך הכחול" של מכשיר וידאו בלי אות — מוכר לכל מי שגדל עם VHS */
+.tv__fault {
+  position: absolute; inset: 0; z-index: 7;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .6em; text-align: center; padding: 20px;
+  background: #1633C9;
+  color: #fff;
+}
+.tv__fault-title { margin: 0; font: 400 clamp(1.6rem, 4vw, 2.6rem)/1 var(--font-osd); letter-spacing: .06em; }
+.tv__fault-text { margin: 0; max-width: 34em; line-height: 1.5; }
+
+.tv__brand {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 8px 0;
+}
+.tv__logo {
+  font: 700 .78rem/1 var(--font);
+  letter-spacing: .12em;
+  color: #D9C4A0;
+  opacity: .8;
+}
+.tv__knobs { display: flex; gap: 10px; }
+.tv__knobs i {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #9A9A9A, #3A3A3A 70%);
+  box-shadow: 0 2px 3px rgba(0,0,0,.6);
+}
+
+/* ---------- 7. מכשיר הווידאו ---------- */
+
+.vcr {
+  grid-area: vcr;
+  justify-self: center;
+  width: 100%; max-width: 820px;
+  padding: 14px 18px 16px;
+  border-radius: 10px;
+  background: linear-gradient(#3A3F48, #22262D 18%, #15181D);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 18px 30px rgba(0,0,0,.55);
+  color: #D8DDE6;
+}
+.vcr__top { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.vcr__slot {
+  flex: 1;
+  height: 26px;
+  background: #050506;
+  border-radius: 3px;
+  box-shadow: inset 0 2px 6px #000, 0 1px 0 rgba(255,255,255,.12);
+  perspective: 200px;
+  overflow: visible;
+}
+.vcr__flap {
+  display: block; height: 100%;
+  background: linear-gradient(#4A505A, #2A2E35);
+  border-radius: 3px;
+  transform-origin: 50% 0;
+}
+.vcr__display {
+  display: flex; align-items: center; gap: 10px;
+  background: #06120C;
+  border-radius: 4px;
+  padding: 3px 12px;
+  box-shadow: inset 0 0 8px #000;
+}
+.vcr__clock {
+  font: 400 1.7rem/1 var(--font-osd);
+  color: #7FF0FF;
+  text-shadow: 0 0 6px rgba(127,240,255,.6);
+  min-width: 5.5ch; text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.vcr__led {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #2A2A2A;
+  box-shadow: inset 0 1px 2px #000;
+}
+.vcr__led[data-state="on"]   { background: #FFB020; box-shadow: 0 0 8px #FFB020; }
+.vcr__led[data-state="play"] { background: #3DFF6A; box-shadow: 0 0 8px #3DFF6A; }
+.vcr__led[data-state="err"]  { background: #FF3355; box-shadow: 0 0 8px #FF3355; }
+
+.vcr__track { position: relative; margin-bottom: 12px; }
+.vcr__seek {
+  --fill: 0%;
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 22px; margin: 0;
+  background: transparent; cursor: pointer;
+}
+.vcr__seek::-webkit-slider-runnable-track {
+  height: 8px; border-radius: 4px;
+  background: linear-gradient(to right, var(--yellow) var(--fill), #474C56 var(--fill));
+}
+.vcr__seek::-moz-range-track {
+  height: 8px; border-radius: 4px;
+  background: linear-gradient(to right, var(--yellow) var(--fill), #474C56 var(--fill));
+}
+.vcr__seek::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; margin-top: -5px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--yellow-dk);
+  box-shadow: 0 2px 4px rgba(0,0,0,.5);
+}
+.vcr__seek::-moz-range-thumb {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--yellow-dk);
+}
+.vcr__ticks { position: absolute; inset: 0; pointer-events: none; }
+.vcr__ticks span {
+  position: absolute; top: 50%;
+  width: 3px; height: 14px; margin-left: -1.5px; transform: translateY(-50%);
+  background: #fff; border-radius: 1px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.5);
+}
+
+.vcr__buttons {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 8px;
+}
+.vbtn {
+  display: grid; place-items: center;
+  width: 46px; height: 40px;
+  color: #E9EDF3;
+  background: linear-gradient(#5A606B, #3A3F48 55%, #2B2F36);
+  border: 0; border-radius: 6px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 3px 0 #0E1013, 0 5px 8px rgba(0,0,0,.4);
+  cursor: pointer;
+}
+.vbtn:hover { color: #fff; filter: brightness(1.12); }
+.vbtn:active { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 1px 0 #0E1013; }
+.vbtn:disabled { opacity: .4; cursor: default; }
+.vbtn--play { width: 62px; color: var(--ink); background: linear-gradient(#FFE266, var(--yellow) 55%, var(--yellow-dk)); }
+.vbtn[aria-pressed="true"] { color: #FF8A9B; }
+.vbtn[aria-expanded="true"] { color: var(--yellow); }
+.vcr__sep { width: 1px; height: 28px; background: rgba(255,255,255,.12); margin-inline: 4px; }
+.vcr__vol { width: 90px; accent-color: var(--yellow); }
+
+/* ---------- 8. פרקים: כרטיס הקרטון שבתוך קופסת הקלטת ---------- */
+
+.chapters {
+  grid-area: ch;
+  align-self: start;
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--ink);
+  background:
+    repeating-linear-gradient(transparent 0 33px, rgba(14,44,140,.16) 33px 34px),
+    var(--cream);
+  border-radius: 6px;
+  padding: 14px 12px 12px;
+  box-shadow: 0 16px 30px rgba(0,0,0,.5);
+  border-top: 10px solid var(--red);
+}
+.chapters[data-open="false"] { display: none; }
+.chapters__title { margin: 0 6px 8px; font-weight: 900; font-size: 1.15rem; color: var(--red); }
+.chapters__list { list-style: none; margin: 0; padding: 0; }
+.chapters__empty { margin: 6px; }
+
+.ch {
+  width: 100%;
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+  font: 500 .98rem/1.3 var(--font);
+  color: inherit; text-align: start;
+  background: none; border: 0; border-radius: 4px;
+  padding: 8px 8px;
+  cursor: pointer;
+}
+.ch:hover { background: rgba(14,44,140,.08); }
+.ch__no { font: 400 1.2rem/1 var(--font-osd); color: var(--wall); }
+.ch__time { font: 400 1.1rem/1 var(--font-osd); color: #4A5068; direction: ltr; }
+.ch[aria-current="true"] { background: var(--yellow); font-weight: 700; }
+/* כותרת חלק ("חלק ב · כוח, ביטחון ומלחמה"): כותרת ביניים ולא עוד שורה —
+   אבל עדיין כפתור, כי גם לתחילת חלק אפשר לקפוץ */
+.ch-part { margin-top: 10px; }
+.ch-part .ch { font-weight: 900; color: var(--red); font-size: .9rem; letter-spacing: .02em; }
+.ch-part .ch[aria-current="true"] { color: var(--ink); }
+.ch[aria-current="true"] .ch__no::before { content: '▶ '; }
+
+/* ---------- 9. מסך מלא ---------- */
+
+.deck.is-fs {
+  position: relative;
+  display: block;
+  max-width: none;
+  width: 100vw; height: 100vh;
+  background: #000;
+}
+.deck.is-fs .tv {
+  max-width: none; min-width: 0;
+  width: 100%; height: 100%;
+  padding: 0; border-radius: 0; background: #000; box-shadow: none;
+}
+.deck.is-fs .tv__screen { aspect-ratio: auto; height: 100%; border-radius: 0; box-shadow: none; }
+.deck.is-fs .tv__brand { display: none; }
+.deck.is-fs .vcr {
+  position: absolute; inset-inline: 0; bottom: 0;
+  max-width: none; border-radius: 0;
+  padding: 14px max(22px, env(safe-area-inset-left)) max(18px, env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgba(0,0,0,.85) 40%);
+  box-shadow: none;
+  z-index: 10;
+  transition: opacity .3s;
+}
+.deck.is-fs .vcr__slot { visibility: hidden; }
+/* ⚠️ בלי זה שם הפרק ב-OSD נבלע מתחת לפס הפקדים, שיושב על התמונה במסך מלא */
+.deck.is-fs .osd:not(.osd--corner) { bottom: 170px; }
+.deck.is-fs .chapters {
+  position: absolute; top: 20px; right: 20px; z-index: 11;   /* פיזי: צד ימין, תחילת השורה בעברית */
+  width: min(340px, 80vw);
+  max-height: calc(100vh - 190px);
+  transition: opacity .3s;
+}
+/* הפקדים נעלמים כשהסרטון רץ והעכבר נח — כמו בכל נגן. פוקוס מקלדת
+   בתוכם משאיר אותם גלויים, אחרת משתמש מקלדת היה מנווט בעיוורון. */
+.deck.is-fs.is-playing:not(.ui-awake) .vcr:not(:focus-within),
+.deck.is-fs.is-playing:not(.ui-awake) .chapters:not(:focus-within) { opacity: 0; }
+.deck.is-fs.is-playing:not(.ui-awake) .tv__screen { cursor: none; }
+
+/* ---------- 10. הקלטת באנימציה ---------- */
+
+.cassette {
+  position: fixed; z-index: 50;
+  border-radius: 6px;
+  background: linear-gradient(#2A2D33, #121418);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 14px 28px rgba(0,0,0,.6);
+  pointer-events: none;
+  will-change: transform;
+}
+.cassette__label {
+  position: absolute; inset: 9% 12% auto;
+  height: 26%;
+  background: #fff;
+  border-top: 6px solid var(--tape-colour, var(--yellow));
+  border-radius: 2px;
+  color: var(--ink);
+  font: 700 clamp(.6rem, 1.4vw, .85rem)/1.1 var(--font);
+  display: grid; place-items: center;
+  padding-inline: 6px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.cassette__window {
+  position: absolute; inset: auto 22% 14%;
+  height: 34%;
+  background: rgba(20,24,30,.9);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px #3A3F48;
+  display: flex; align-items: center; justify-content: space-around;
+}
+.cassette__window i {
+  width: 30%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, #EEE 0 18%, #3A2A1A 20% 100%);
+}
+
+/* ---------- 11. דיאלוג קיצורי המקלדת ---------- */
+
+.keys {
+  border: 3px solid var(--yellow);
+  border-radius: 12px;
+  background: var(--wall);
+  color: var(--cream);
+  padding: 22px 26px;
+  max-width: min(520px, calc(100vw - 32px));
+  font-family: var(--font);
+}
+.keys::backdrop { background: rgba(3,8,30,.7); }
+.keys h2 { margin: 0 0 14px; color: var(--yellow); font-weight: 900; }
+.keys__list {
+  display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; margin: 0 0 18px;
+  align-items: center;
+}
+.keys__list dt { white-space: nowrap; }
+.keys__list dd { margin: 0; }
+.keys kbd {
+  display: inline-block; min-width: 1.8em; text-align: center;
+  font: 700 .9rem/1 var(--font);
+  color: var(--ink); background: var(--cream);
+  border-radius: 4px; padding: .3em .45em;
+  box-shadow: 0 2px 0 #9A8F6A;
+}
+
+/* ---------- 12. נייד ונגישות ---------- */
+
+@media (max-width: 900px) {
+  .deck, .deck:has(.chapters[data-open="false"]) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "tv" "vcr" "ch";
+  }
+  .chapters { max-height: none; }
+  .tv { min-width: 0; max-width: none; }
+}
+
+@media (max-width: 720px) {
+  :root { --tape-w: 124px; --gap: 16px; }
+  .store__head { grid-template-columns: 1fr; justify-items: center; }
+  .store__home { justify-self: stretch; justify-content: center; }
+  .store__open { display: none; }
+  .sign { padding-inline: 40px; }
+  .sign::before { inset-inline-start: 22px; }
+  .sign::after  { inset-inline-end: 22px; }
+
+  /* מדף בגלילה אופקית במקום עמודה ארוכה של קופסאות */
+  .rack__row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-block: 14px 4px;
+    margin-inline: calc(var(--gap) * -1);
+    scrollbar-width: thin;
+  }
+  .rack__row > li { scroll-snap-align: center; }
+  .tape__title { font-size: .98rem; }
+
+  .room__bar .knob-btn span { display: none; }
+  .room__bar .knob-btn { padding: .55em; }
+  .tv { padding: 10px 10px 8px; border-radius: 18px; }
+  .tv__screen { border-radius: 12px / 16px; box-shadow: 0 0 0 4px #1A1512, inset 0 0 30px #000; }
+  .tv__brand { display: none; }
+  .vcr { padding: 10px 10px 12px; }
+  .vcr__top { gap: 10px; }
+  .vcr__clock { font-size: 1.4rem; }
+  .vbtn { width: 42px; height: 42px; }
+  .vbtn--play { width: 56px; }
+  .vcr__sep { display: none; }
+  [data-act="keys"] { display: none; }        /* אין מקלדת במסך מגע */
+}
+
+/* בטלפון עוצמת הקול נשלטת בכפתורים הפיזיים. ב-iOS volume אפילו אינו ניתן לכתיבה. */
+@media (hover: none) {
+  .vcr__vol { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .tape:hover, .tape:focus-visible { transform: none; }
+}
+
+@media (forced-colors: active) {
+  .tape, .vbtn, .knob-btn, .tv__prompt { border: 2px solid ButtonText; }
+  .ch[aria-current="true"] { outline: 2px solid Highlight; }
+}

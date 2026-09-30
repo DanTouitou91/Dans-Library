@@ -11,12 +11,20 @@
 # ‎'unsafe-inline' ל-script-src הייתה פותחת את האתר להזרקת קוד, וזה מחיר
 # ‎גבוה בהרבה מקובץ נפרד אחד. script-src נשאר בלי unsafe-inline.
 
+#
+# ‎הערה על media-src (סִפְרִיַּית הַקַּלָּטוֹת):
+# ‎הסרטונים גדולים מדי למאגר ויושבים ב-GitHub Releases. הכתובת ב-github.com
+# ‎מחזירה 302 לכתובת חתומה ב-release-assets.githubusercontent.com, ו-CSP
+# ‎בודק גם את יעד ההפניה — לכן שני המארחים חייבים להופיע. objects.* הוא
+# ‎המארח הקודם של GitHub לאותם קבצים, למקרה שיחזרו אליו. בלי media-src
+# ‎בכלל הכלל נופל ל-default-src 'self', והסרטון נחסם בשקט.
+
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=(), interest-cohort=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; media-src 'self' https://github.com https://release-assets.githubusercontent.com https://objects.githubusercontent.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
 
 # ‎הספריות נעולות לגרסה מדויקת ולעולם לא משתנות תחת אותו נתיב.
 /vendor/*
@@ -50,4 +58,16 @@
 /style.css
   Cache-Control: public, max-age=0, must-revalidate
 /assets/*
+  Cache-Control: public, max-age=0, must-revalidate
+# ‎סִפְרִיַּית הַקַּלָּטוֹת. ‏/videos — כי Netlify מגישה videos.html גם בלי הסיומת,
+# ‎וכלל לפי נתיב לא יחול על הכתובת הזו אם לא נכתוב אותה במפורש (כמו "/").
+/videos
+  Cache-Control: public, max-age=0, must-revalidate
+/videos.html
+  Cache-Control: public, max-age=0, must-revalidate
+/videos.js
+  Cache-Control: public, max-age=0, must-revalidate
+/videos.css
+  Cache-Control: public, max-age=0, must-revalidate
+/tapes.json
   Cache-Control: public, max-age=0, must-revalidate

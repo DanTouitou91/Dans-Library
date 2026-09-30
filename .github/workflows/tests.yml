@@ -20,7 +20,7 @@ jobs:
       - name: התקנת תלויות
         run: |
           python -m pip install --upgrade pip
-          pip install playwright pillow python-docx
+          pip install playwright pillow python-docx imageio-ffmpeg
           python -m playwright install --with-deps chromium
 
       # ⚠️ חייבים את השרת הזה ולא http.server — הוא מגיש את _headers
@@ -39,3 +39,7 @@ jobs:
 
       - name: בדיקות CSP ורינדור
         run: python3 tests/csp_check.py http://127.0.0.1:8788
+
+      # ‏מרים בעצמו את tests/fakegithub.py (צריך openssl — קיים ב-ubuntu-latest)
+      - name: בדיקות ספריית הקלטות
+        run: python3 tests/videos_check.py http://127.0.0.1:8788
