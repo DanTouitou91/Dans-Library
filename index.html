@@ -7,14 +7,22 @@
 <meta name="description" content="ספרייה דיגיטלית וינטג' לחומרי הלמידה של דן טואיטו — קריאה, סיכום וארגון של ספרי הקורסים.">
 <meta name="theme-color" content="#4A2418">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="assets/favicon.svg">
+<!-- ⚠️ אייפון לא מקבל SVG כאייקון למסך הבית — רק PNG. ‏assets/icons/ נוצר מ-favicon.svg
+     (ראו tools/icons.py). -->
+<link rel="apple-touch-icon" href="assets/icons/icon-180.png">
+<!-- התקנה למסך הבית: חשוב לקריאה בטיסה. ראו "קריאה בלי אינטרנט" ב-README. -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="הספרייה של דן">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 
 <!-- גופנים: Frank Ruhl Libre (כותרות), David Libre (גוף הטקסט), Miriam Libre (ממשק) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=David+Libre:wght@400;500;700&family=Miriam+Libre:wght@400;700&family=Rubik:wght@700&display=swap">
 
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 
@@ -114,6 +122,9 @@
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></symbol>
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><path d="M12 11.2v5"/><path d="M12 7.9h.01"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4.6 21 20H3z"/><path d="M12 10.2v4"/><path d="M12 17.1h.01"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4.5v10.5"/><path d="m7.5 10.8 4.5 4.5 4.5-4.5"/><path d="M5 19.5h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5.5 12.5 4.2 4.2 8.8-9.2"/></symbol>
+    <symbol id="i-cloud-off" viewBox="0 0 24 24"><path d="M8.2 7.4A5.5 5.5 0 0 1 17 10a3.9 3.9 0 0 1 2.8 5.9"/><path d="M16 18.5H7.2A4.2 4.2 0 0 1 6 10.3"/><path d="m4 4 16 16"/></symbol>
   </defs>
 </svg>
 
@@ -131,6 +142,12 @@
      ============================================================ -->
 <div id="shelf-view" class="view" tabindex="-1">
 
+  <!-- מוצג רק כשאין חיבור — ראו Offline ב-script.js -->
+  <p class="offline-bar" data-offline-bar role="status" hidden>
+    <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-cloud-off"/></svg>
+    <span data-offline-bar-text>אין חיבור לאינטרנט</span>
+  </p>
+
   <header class="masthead">
     <div class="masthead__plate">
       <h1 class="masthead__title">אוסף ספרי הלמידה של דן</h1>
@@ -145,6 +162,12 @@
         <span class="btn__emoji" aria-hidden="true">📼</span>
         <span class="btn__label">לספריית קלטות הוידאו של דן</span>
       </a>
+      <!-- מוסתר בדפדפן שאין בו Service Worker (ראו html.can-offline ב-style.css) -->
+      <button type="button" class="btn btn--brass btn--offline" id="btn-offline" aria-haspopup="dialog">
+        <span class="btn__icon" aria-hidden="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download"/></svg></span>
+        <span class="btn__label">קריאה בלי אינטרנט</span>
+        <span class="btn__count" data-offline-count></span>
+      </button>
       <button type="button" class="btn btn--brass" id="btn-about" aria-haspopup="dialog">
         <span class="btn__icon" aria-hidden="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-info"/></svg></span>
         <span class="btn__label">אודות</span>
@@ -206,6 +229,13 @@
         <span class="btn__icon" aria-hidden="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-book"/></svg></span>
         <span class="btn__label">התחל קריאה</span>
       </button>
+      <span class="save-slot" data-offline-slot hidden>
+        <button type="button" class="btn btn--save" data-offline-save data-state="idle" aria-pressed="false">
+          <span class="btn__icon" aria-hidden="true"><svg class="icon icon--idle" aria-hidden="true" focusable="false"><use href="#i-download"/></svg><svg class="icon icon--saved" aria-hidden="true" focusable="false"><use href="#i-check"/></svg></span>
+          <span class="btn__label" data-offline-label>שמירה לקריאה בלי אינטרנט</span>
+        </button>
+        <button type="button" class="save-slot__remove" data-offline-remove hidden>הסרה</button>
+      </span>
       <button type="button" class="btn btn--ghost" data-close-layer>חזרה למדף</button>
     </footer>
   </div>
@@ -229,6 +259,46 @@
     </div>
   </div>
 </div>
+
+<div id="offline-layer" class="overlay" hidden>
+  <div class="overlay__backdrop" data-close-layer></div>
+
+  <div class="tome tome--offline" role="dialog" aria-modal="true" aria-labelledby="offline-title" tabindex="-1">
+    <button type="button" class="tome__close" data-close-layer aria-label="סגירה"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button>
+    <div class="tome__page">
+      <h2 class="tome__title" id="offline-title">קריאה בלי אינטרנט</h2>
+      <span class="tome__flourish" aria-hidden="true">❦</span>
+      <div class="tome__text tome__scroll" tabindex="0" aria-label="שמירת ספרים במכשיר">
+        <p>שומרים את הספרים במכשיר — ואז אפשר לפתוח ולקרוא אותם גם בטיסה, בלי קליטה ובלי Wi-Fi.</p>
+        <p class="offline-lead">ההערות בפנקס, הסימניות והעמוד שבו עצרתם נשמרים במכשיר ממילא, וממשיכים לעבוד גם בלי חיבור.</p>
+        <p class="offline-tip" data-offline-unsupported hidden>הדפדפן הזה לא תומך בשמירת ספרים במכשיר. נסו בגרסה עדכנית של ספארי, כרום או אדג'.</p>
+        <ul class="offline-list" data-offline-list></ul>
+        <div class="offline-actions">
+          <button type="button" class="btn btn--wood" data-offline-all>
+            <span class="btn__icon" aria-hidden="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download"/></svg></span>
+            <span class="btn__label" data-offline-all-label>שמירת כל הספרים</span>
+          </button>
+          <button type="button" class="btn btn--ghost" data-offline-clear hidden>הסרת כל הספרים מהמכשיר</button>
+        </div>
+        <p class="offline-progress" data-offline-progress role="status" aria-live="polite"></p>
+        <div class="offline-tip offline-tip--ios">
+          <p><strong>באייפון ובאייפד — לפני הטיסה:</strong></p>
+          <ol>
+            <li>פותחים את האתר בספארי, לוחצים על <b>שיתוף</b> ובוחרים <b>"הוסף למסך הבית"</b>.</li>
+            <li>פותחים את הספרייה מהאייקון החדש, ושומרים את הספרים <b>משם</b>.</li>
+            <li>בודקים במצב טיסה שספר נפתח.</li>
+          </ol>
+          <p>למה מהאייקון: לספרייה שבמסך הבית יש אחסון משלה, והיא לא מוחקת אותו גם אחרי שבועות בלי ביקור. ספארי רגיל רשאי למחוק נתונים של אתר שלא נכנסו אליו שבוע.</p>
+        </div>
+        <p class="offline-tip offline-tip--standalone">✓ הספרייה פתוחה מהמסך הבית — מה שתשמרו כאן יישאר במכשיר.</p>
+        <p class="offline-tip">אוסף קלטות הוידאו זמין רק עם חיבור לאינטרנט — הסרטונים גדולים מדי לשמירה כאן.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- פתק צף להודעות שמירה מחוץ לחלונית (‏toast() של הקורא חי רק בתוך הקורא) -->
+<p class="offline-note" data-offline-note role="status" aria-live="polite" hidden></p>
 
 <div id="about-layer" class="overlay" hidden>
   <div class="overlay__backdrop" data-close-layer></div>
@@ -412,7 +482,7 @@
 <!-- ⚠️ ?v= קיים כדי לעקוף עותק ישן ששמור אצל משתמש. הנכונות עצמה
      נשענת על Cache-Control ב-_headers, ולכן אין חובה לעדכן אותו בכל
      שינוי — רק כשצריך לשבור מטמון תקוע. -->
-<script src="script.js?v=9" defer></script>
+<script src="script.js?v=10" defer></script>
 
 <!-- Google Analytics. ⚠️ הקוד המוטבע שגוגל מספקת נמצא ב-assets/analytics.js
      ולא כאן: ל-script-src אין 'unsafe-inline', ובלוק מוטבע היה נחסם בשקט. -->

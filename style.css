@@ -1398,6 +1398,168 @@ html::-webkit-scrollbar-corner,
   text-decoration: underline;
 }
 
+/* ---------- 10ב. קריאה בלי אינטרנט ---------- */
+
+/* דפדפן בלי Service Worker: אין מה להציע, ולכן הכפתור לא מופיע בכלל */
+html:not(.can-offline) .btn--offline { display: none; }
+
+.btn__count:empty { display: none; }
+.btn__count {
+  font-size: .78em; font-weight: 400;
+  padding: .05em .45em;
+  border-radius: 999px;
+  background: rgba(232,206,143,.16);
+  border: 1px solid rgba(232,206,143,.28);
+}
+
+/* ⚠️ הכרטיס הוא נייר ולא עץ, ולכן לא --brass-lt (טקסט בהיר על נייר בהיר).
+   דיו על נייר עם מסגרת פליז מקווקווה — כמו חותמת "נשמר בארכיון". */
+:root { --ok-text: #1F5A36; --ok-edge: rgba(31,90,54,.55); }
+:root[data-theme="dark"] { --ok-text: #A8D9B5; --ok-edge: rgba(168,217,181,.45); }
+
+.save-slot { display: inline-flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
+.btn--save {
+  color: var(--ink);
+  background: rgba(176,141,87,.10);
+  border: 1px dashed var(--brass-dk);
+  font-size: .84rem;
+  padding: .5em .9em;
+}
+.btn--save:hover { background: rgba(176,141,87,.2); }
+.btn--save .icon--saved,
+.btn--save[data-state="saved"] .icon--idle { display: none; }
+.btn--save[data-state="saved"] .icon--saved { display: inline-block; }
+.btn--save[data-state="saved"] {
+  color: var(--ok-text);
+  border: 1px solid var(--ok-edge);
+  background: transparent;
+  cursor: default;
+  filter: none;
+}
+.btn--save[data-state="busy"] { opacity: 1; cursor: progress; }
+/* כפתור במצב "busy" מושבת, ו-.btn[disabled] היה מעמעם אותו ל-45% — דווקא
+   כשהוא מציג את ההתקדמות */
+.btn--save[disabled] { opacity: 1; pointer-events: none; }
+.save-slot__remove {
+  background: none; border: none; padding: .2em .1em; cursor: pointer;
+  font: inherit; font-family: var(--font-ui); font-size: .76rem;
+  color: var(--text-soft);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.save-slot__remove:hover { color: var(--accent-text); }
+
+/* סימון על השדרה: חותם פליז קטן בתחתית — כמו מדבקת "שמור" על ספר בספרייה */
+.book__saved {
+  position: absolute;
+  inset-block-end: 26px; inset-inline-start: 50%;
+  translate: 50% 0;     /* ⚠️ פיזי: inset-inline-start ב-RTL הוא הצד הימני */
+  inline-size: 20px; block-size: 20px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  color: #2A1B0E;
+  background: radial-gradient(circle at 35% 30%, #F4E2AE, var(--brass) 60%, #7A5C31);
+  box-shadow: 0 1px 2px rgba(0,0,0,.55), inset 0 -1px 1px rgba(0,0,0,.3);
+  pointer-events: none;
+}
+.book__saved .icon { inline-size: 13px; block-size: 13px; stroke-width: 2.6; }
+
+/* פס "אין חיבור" בראש המדף */
+.offline-bar {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  margin: 0;
+  padding: .55rem 1rem;
+  font-family: var(--font-ui); font-size: .86rem;
+  color: #F6E9CD;
+  background: linear-gradient(180deg, #3B4A3F, #26322A);
+  border-block-end: 1px solid rgba(232,206,143,.3);
+  text-align: center;
+}
+.offline-bar[hidden] { display: none; }
+.offline-bar .icon { flex: none; inline-size: 1.15rem; block-size: 1.15rem; }
+
+/* אוסף הקלטות בלי חיבור: נשאר לחיץ (ללחיצה יש הסבר), רק מעומעם */
+.btn--vhs.is-unavailable { filter: grayscale(.7) brightness(.8); }
+
+/* פתק צף להודעות שמירה — מעל השכבות, בתחתית המסך */
+.offline-note {
+  position: fixed; z-index: 80;
+  inset-block-end: max(18px, env(safe-area-inset-bottom));
+  inset-inline: 16px;
+  margin: 0 auto;
+  inline-size: fit-content; max-inline-size: min(34rem, calc(100% - 32px));
+  padding: .6em 1.1em;
+  font-family: var(--font-ui); font-size: .86rem; line-height: 1.5;
+  color: var(--paper);
+  background: linear-gradient(180deg, var(--wood-light), var(--wood-dark));
+  border: 1px solid var(--brass-dk);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-mid);
+  animation: card-in .25s ease both;
+}
+:root[data-theme="dark"] .offline-note { color: var(--ink); }
+.offline-note[hidden] { display: none; }
+
+/* --- החלונית --- */
+.tome--offline .tome__text { text-align: start; }
+.offline-lead { color: var(--text-soft); font-size: .95em; }
+
+.offline-list {
+  margin: 1.1rem 0 1rem; padding: 0; list-style: none;
+  border-block-start: 1px solid rgba(110,80,40,.25);
+}
+.offline-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center; gap: .4rem .8rem;
+  padding: .55rem 0;
+  border-block-end: 1px solid rgba(110,80,40,.25);
+  font-family: var(--font-ui); font-size: .86rem;
+}
+.offline-row__title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; }
+.offline-row__size { color: var(--text-soft); font-size: .8rem; unicode-bidi: isolate; }
+.offline-row__state { color: var(--text-soft); min-inline-size: 5.5em; }
+.offline-row[data-state="saved"] .offline-row__state { color: var(--ok-text); font-weight: 700; }
+.offline-row__act {
+  background: none; cursor: pointer;
+  font: inherit; font-weight: 700; font-size: .8rem;
+  color: var(--accent-text);
+  border: 1px solid currentColor; border-radius: var(--radius);
+  padding: .25em .7em;
+}
+:root[data-theme="dark"] .offline-row__act { color: var(--brass-lt); }
+.offline-row__act:disabled { opacity: .45; cursor: default; }
+
+.offline-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.offline-actions .btn[disabled] { opacity: .6; }
+.offline-progress { min-block-size: 1.5em; margin: .7rem 0 0; font-family: var(--font-ui); font-size: .86rem; color: var(--ok-text); }
+
+.offline-tip {
+  margin-block-start: 1rem;
+  padding: .75rem .95rem;
+  font-size: .92em;
+  border-inline-start: 3px solid var(--brass);
+  background: rgba(176,141,87,.1);
+}
+.offline-tip p { margin: 0 0 .4em; }
+.offline-tip p:last-child { margin: 0; }
+.offline-tip ol { margin: .2em 0 .55em; padding-inline-start: 1.3em; }
+.offline-tip li { margin-block-end: .25em; }
+/* החלונית כולה עשויה מ-tome__text, ושם p:first-child מודגש וממורכז —
+   אסור שזה יחול על הפסקאות בתוך ההסבר */
+.tome__text .offline-tip p:first-child {
+  text-align: start; font-size: 1em; font-weight: inherit; color: inherit; margin-block-end: .4em;
+}
+.offline-tip--standalone { display: none; }
+html.is-standalone .offline-tip--standalone { display: block; }
+html.is-standalone .offline-tip--ios { display: none; }
+
+@media (max-width: 520px) {
+  .offline-row { grid-template-columns: 1fr auto; }
+  .offline-row__size { grid-column: 1; grid-row: 2; }
+  .offline-row__state { grid-column: 2; grid-row: 1; text-align: end; min-inline-size: 0; }
+  .offline-row__act { grid-column: 2; grid-row: 2; justify-self: end; }
+}
+
 /* ---------- 11. פוטר ---------- */
 
 .site-footer {

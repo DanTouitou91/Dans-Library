@@ -44,6 +44,11 @@ jobs:
       - name: בדיקות מונה המבקרים בדפדפן
         run: python3 tests/visits_check.py http://127.0.0.1:8788
 
+      # ‏מרים עותק משלו של cspserve.py (פורט 8791) והורג אותו באמצע — "בלי
+      # אינטרנט" אמיתי, לא רק אמולציה
+      - name: בדיקות קריאה בלי אינטרנט
+        run: python3 tests/offline_check.py
+
       - name: בדיקות CSP ורינדור
         run: python3 tests/csp_check.py http://127.0.0.1:8788
 

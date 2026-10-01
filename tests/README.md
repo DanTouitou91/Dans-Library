@@ -14,6 +14,7 @@ python3 tests/verify.py              # 180 בדיקות זרימה בספריי�
 python3 tests/csp_check.py           # CSP ורינדור, בארבעת הספרים
 python3 tests/videos_check.py        # אוסף קלטות הוידאו של דן (מפעיל לבד את fakegithub.py)
 python3 tests/visits_check.py        # מונה המבקרים בדפדפן (‏/api/visits מדומה)
+python3 tests/offline_check.py       # קריאה בלי אינטרנט — מרים cspserve משלו (פורט 8791)
 node --test tests/visits_test.mjs    # לוגיקת פונקציית המונה, עם store בזיכרון
 ```
 
@@ -36,6 +37,19 @@ node --test tests/visits_test.mjs    # לוגיקת פונקציית המונה,
   בבקשה אחת, ואז שום בקשה לא נשלחת אחרי שהכתובת פגה — והבדיקה "עוברת"
   בלי לבדוק כלום. לכן השרת מגביל קצב (`FAKEGH_CHUNK`, `FAKEGH_DELAY`),
   והבדיקה דורשת לפחות תשובת `expired` אחת ביומן.
+
+## קריאה בלי אינטרנט (`offline_check.py`)
+
+- ⚠️ **"בלי אינטרנט" אמיתי.** הבדיקה מרימה עותק משלה של `cspserve.py`
+  והורגת אותו לפני החלק הלא-מקוון. `context.set_offline` לבדו לא מספיק:
+  אם הוא לא חל על בקשות ה-Service Worker, הבדיקה הייתה עוברת מול שרת חי.
+  הוא מופעל בנוסף, כדי ש-`navigator.onLine` יהיה false כמו במצב טיסה.
+- ⚠️ **רענון בתוך הקורא.** כשנכנסים ישר לכתובת של ספר, הקורא נפתח לפני
+  שרשימת הספרים השמורים נקראה — וספר שמור הוצג כ"לא נשמר". יש בדיקה.
+- ⚠️ `page.route` לא רואה בקשות שה-SW עונה עליהן. בדיקות שמיירטות ספרים
+  רצות עם `service_workers="block"`.
+- ⚠️ `wait_for_function` עם ביטוי (ולא פונקציה) מריץ `eval`, וה-CSP חוסם
+  אותו. תמיד `"() => ..."`.
 
 ## ⚠️ למה `cspserve.py` ולא `python -m http.server`
 

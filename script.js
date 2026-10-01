@@ -408,6 +408,7 @@ const Shelf = {
     for (const [name, books] of groups) {
       host.append(this.buildShelf(name, books));
     }
+    Offline.paint();      // סימון "שמור במכשיר" על השדרות
   },
 
   emptyShelf(name) {
@@ -755,6 +756,9 @@ const Card = {
     $('[data-card-start]').onclick = () => {
       Router.go(`#/book/${book.id}/read/${Math.max(1, state.lastPage || 1)}`);
     };
+    $('[data-offline-save]').onclick = () => { if (!Offline.isSaved(book)) Offline.save(book); };
+    $('[data-offline-remove]').onclick = () => Offline.remove(book);
+    Offline.paint();
 
     Layers.open(layer);
   },
@@ -2055,6 +2059,14 @@ const Reader = {
     const tocEmpty = $('[data-toc-empty]');
     if (tocEmpty) { tocEmpty.hidden = true; tocEmpty.textContent = ''; }
 
+    // אין חיבור והספר לא נשמר: אין טעם לחכות לניסיון כושל (ולניסיון
+    // החוזר שאחריו) כדי להגיד את מה שכבר ידוע.
+    if (!navigator.onLine && !(await Offline.hasCopy(book))) {
+      if (this.book !== book) return;      // המשתמש כבר עבר לספר אחר
+      this.showFault({ code: 'offline-unsaved' });
+      return;
+    }
+
     try {
       this.source = await BookSource.openWithRetry(book, ({ loaded, total }) => {
         if (total) {
@@ -2151,6 +2163,15 @@ const Reader = {
     // חסרת טעם להעלות את הקובץ ולדחוף מחדש.
     const libDown = err?.code === 'pdfjs-missing';
     const missing = err?.name === 'MissingPDFException';
+    // ⚠️ בלי רשת, ספר שלא נשמר נכשל בדיוק כמו שרת שנפל. ההודעה הכללית
+    // ("בודקים מה קרה… לא הצלחנו להגיע לשרת") לא אומרת לדן מה לעשות.
+    if (err?.code === 'offline-unsaved' || (!navigator.onLine && this.book && !Offline.isSaved(this.book))) {
+      $('[data-fault-title]').textContent = 'הספר הזה לא נשמר במכשיר';
+      $('[data-fault-text]').textContent = 'אין כרגע חיבור לאינטרנט. כשתחזור לרשת, פתח את כרטיס הספר ' +
+        'ולחץ "שמירה לקריאה בלי אינטרנט" — ואז אפשר יהיה לקרוא אותו גם בלי חיבור.';
+      $('#fault').hidden = false;
+      return;
+    }
     $('[data-fault-title]').textContent = missing
       ? 'הספר לא נמצא על המדף'
       : libDown ? 'רכיב הקריאה לא נטען'
@@ -2996,6 +3017,404 @@ const Docx = {
 };
 
 /* ============================================================================
+ * §11ב — קריאה בלי אינטרנט
+ * ----------------------------------------------------------------------------
+ *  דן ביקש לקרוא בטיסה. ‏sw.js מגיש את האתר עצמו בלי רשת; כאן נמצא החלק
+ *  שהמשתמש רואה: שמירה והסרה של ספרים, סימון על המדף, ופס "אין חיבור".
+ *
+ *  ⚠️ הספרים נכתבים למטמון מכאן ולא מה-SW, כדי שאפשר יהיה להציג התקדמות
+ *  ולבדוק שמה שהגיע הוא באמת PDF (תשובת שגיאה שנשמרת "לטיסה" היא בדיוק
+ *  הכשל שאסור שיקרה — מגלים אותו רק באוויר).
+ *
+ *  המפתח במטמון הוא הכתובת המדויקת של BookSource.urlFor, כולל ‎?v=rev.
+ *  ספר נחשב "שמור" אם יש עותק כלשהו של הקובץ שלו; עותק של מהדורה קודמת
+ *  משודרג אוטומטית ב-refresh() כשיש חיבור.
+ * ========================================================================== */
+
+const Offline = {
+  CACHE: 'dl-books',
+  supported: 'serviceWorker' in navigator && 'caches' in window && window.isSecureContext,
+  saved: new Map(),      // pathname → הכתובת המלאה שנשמרה
+  busy: new Map(),       // book.id → אחוז התקדמות
+  sizes: new Map(),      // book.id → בתים (לתצוגה בלבד)
+
+  async init() {
+    document.documentElement.classList.toggle('can-offline', this.supported);
+    this.watchConnection();
+    $('#btn-offline')?.addEventListener('click', () => this.openPanel());
+    $('[data-offline-all]')?.addEventListener('click', () => this.saveAll());
+    $('[data-offline-clear]')?.addEventListener('click', () => this.clearAll());
+    if (!this.supported) return;
+
+    this.ready = this.scan();
+    try {
+      await navigator.serviceWorker.register('sw.js');
+    } catch (err) {
+      console.warn('[offline] רישום ה-Service Worker נכשל', err);
+    }
+    await this.ready;
+    this.paint();
+    navigator.serviceWorker.ready.then((reg) => this.warm(reg)).catch(() => {});
+    if (navigator.onLine) this.refresh();
+  },
+
+  /* ---------- מצב ---------- */
+
+  key(book) { return new URL(BookSource.urlFor(book), location.href).href; },
+  path(book) { return new URL(book.file, location.href).pathname; },
+  isSaved(book) { return this.supported && this.saved.has(this.path(book)); },
+
+  /**
+   * ⚠️ גרסה אסינכרונית ל-isSaved, לקורא. כשנכנסים ישר לכתובת של ספר
+   * (רענון בתוך הקורא) הקורא נפתח *לפני* ש-scan() סיים, ו-isSaved החזיר
+   * false — ספר שמור הוצג בטיסה כ"לא נשמר במכשיר".
+   */
+  async hasCopy(book) {
+    if (!this.supported) return false;
+    try { await this.ready; } catch {}
+    return this.isSaved(book);
+  },
+  savedCount() { return CATALOG.filter((b) => this.isSaved(b)).length; },
+
+  async scan() {
+    try {
+      const cache = await caches.open(this.CACHE);
+      this.saved = new Map((await cache.keys()).map((r) => [new URL(r.url).pathname, r.url]));
+    } catch { this.saved = new Map(); }
+  },
+
+  /** מבקש מה-SW לשמור את כל מה שהדף כבר טען — כולל הגופנים, שנטענו לפניו. */
+  warm(reg) {
+    const urls = [location.href.split('#')[0],
+      ...performance.getEntriesByType('resource').map((e) => e.name)];
+    reg.active?.postMessage({ type: 'warm', urls });
+  },
+
+  /* ---------- שמירה ---------- */
+
+  /**
+   * מוריד ספר אחד מהרשת ושומר אותו. מחזיר את גודלו בבתים.
+   * ‏cache:'reload' אומר ל-SW "לרשת, לא לעותק השמור".
+   */
+  async download(book, onBytes) {
+    const url = this.key(book);
+    const res = await fetch(url, { cache: 'reload' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const chunks = [];
+    if (res.body?.getReader) {
+      const reader = res.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        onBytes?.(value.byteLength);
+      }
+    } else {
+      const buf = new Uint8Array(await res.arrayBuffer());
+      chunks.push(buf);
+      onBytes?.(buf.byteLength);
+    }
+    const blob = new Blob(chunks, { type: 'application/pdf' });
+    const magic = new TextDecoder().decode(await blob.slice(0, 5).arrayBuffer());
+    if (magic !== '%PDF-') throw new Error('not-a-pdf');
+
+    const cache = await caches.open(this.CACHE);
+    await cache.put(url, new Response(blob, { headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Length': String(blob.size),
+      'X-DL-Etag': res.headers.get('ETag') || '',
+    } }));
+    // מהדורה קודמת של אותו ספר כבר לא נחוצה
+    for (const req of await cache.keys()) {
+      if (req.url !== url && new URL(req.url).pathname === this.path(book)) await cache.delete(req);
+    }
+    this.saved.set(this.path(book), url);
+    this.sizes.set(book.id, blob.size);
+    return blob.size;
+  },
+
+  async save(book) {
+    if (!this.supported || this.busy.has(book.id)) return false;
+    if (!navigator.onLine) { this.say('אין חיבור לאינטרנט — אפשר לשמור ספרים רק כשיש רשת.'); return false; }
+    this.persist();
+    this.busy.set(book.id, 0);
+    this.paint();
+    try {
+      const total = await this.sizeOf(book);
+      let got = 0;
+      await this.download(book, (n) => {
+        got += n;
+        if (total) this.busy.set(book.id, Math.min(99, Math.round((got / total) * 100)));
+        this.paintProgress(book);
+      });
+      announce(`"${book.title}" נשמר במכשיר`);
+      return true;
+    } catch (err) {
+      console.warn('[offline] השמירה נכשלה', book.id, err);
+      this.say(`לא הצלחנו לשמור את "${book.title}". בדוק את החיבור ונסה שוב.`);
+      return false;
+    } finally {
+      this.busy.delete(book.id);
+      this.paint();
+    }
+  },
+
+  async remove(book) {
+    const cache = await caches.open(this.CACHE);
+    for (const req of await cache.keys()) {
+      if (new URL(req.url).pathname === this.path(book)) await cache.delete(req);
+    }
+    this.saved.delete(this.path(book));
+    announce(`"${book.title}" הוסר מהמכשיר`);
+    this.paint();
+  },
+
+  async saveAll() {
+    const todo = CATALOG.filter((b) => !this.isSaved(b));
+    for (const [i, book] of todo.entries()) {
+      this.say(`שומר ${i + 1} מתוך ${todo.length}: ${book.title}…`);
+      if (!(await this.save(book))) return;
+    }
+    if (this.savedCount() === CATALOG.length) {
+      this.say(`כל ${CATALOG.length} הספרים שמורים במכשיר ✓`);
+    }
+  },
+
+  async clearAll() {
+    for (const book of CATALOG) if (this.isSaved(book)) await this.remove(book);
+    this.say('הספרים הוסרו מהמכשיר.');
+  },
+
+  /** גודל הקובץ לפני ההורדה — להתקדמות באחוזים ולתצוגה ב"קריאה בלי אינטרנט". */
+  async sizeOf(book) {
+    if (this.sizes.has(book.id)) return this.sizes.get(book.id);
+    try {
+      const res = await fetch(this.key(book), { method: 'HEAD', cache: 'no-cache' });
+      const n = Number(res.headers.get('Content-Length')) || 0;
+      if (res.ok && n) this.sizes.set(book.id, n);
+      return n;
+    } catch { return 0; }
+  },
+
+  /**
+   * ‏navigator.storage.persist: בלי זה הדפדפן רשאי למחוק את הספרים כשחסר
+   * לו מקום, בלי לשאול. נקרא בלחיצה של המשתמש, כי חלק מהדפדפנים מאשרים
+   * רק אז.
+   */
+  persist() {
+    try { navigator.storage?.persist?.(); } catch {}
+  },
+
+  /**
+   * כשיש חיבור: ספר ששונה בשרת (ETag אחר) או שה-rev שלו עלה יורד מחדש
+   * ברקע — כך מה שבטיסה הוא תמיד המהדורה האחרונה.
+   * ⚠️ אחרי רענון נשמר ה-ETag של בקשת ה-HEAD עצמה. אם ה-HEAD וה-GET
+   * מחזירים צורות שונות של אותו ETag, ההשוואה הבאה תתאים ולא תיווצר
+   * הורדה חוזרת בכל טעינה.
+   */
+  async refresh() {
+    const cache = await caches.open(this.CACHE);
+    for (const book of CATALOG) {
+      const have = this.saved.get(this.path(book));
+      if (!have || this.busy.has(book.id)) continue;
+      try {
+        if (have !== this.key(book)) { await this.download(book); continue; }
+        const head = await fetch(this.key(book), { method: 'HEAD', cache: 'no-cache' });
+        if (!head.ok) continue;
+        const hit = await cache.match(have);
+        const tagNow = head.headers.get('ETag') || '';
+        const tagWas = hit?.headers.get('X-DL-Etag') || '';
+        const lenNow = Number(head.headers.get('Content-Length')) || 0;
+        const lenWas = Number(hit?.headers.get('Content-Length')) || 0;
+        const changed = (tagNow && tagWas && tagNow !== tagWas) || (lenNow && lenWas && lenNow !== lenWas);
+        if (!changed) continue;
+        await this.download(book);
+        const fresh = await cache.match(this.key(book));
+        if (fresh && tagNow) {
+          const headers = new Headers(fresh.headers);
+          headers.set('X-DL-Etag', tagNow);
+          await cache.put(this.key(book), new Response(await fresh.blob(), { headers }));
+        }
+      } catch (err) {
+        console.warn('[offline] רענון ספר שמור נכשל', book.id, err);
+      }
+    }
+    this.paint();
+  },
+
+  /* ---------- חיבור ---------- */
+
+  watchConnection() {
+    const sync = () => {
+      const off = !navigator.onLine;
+      document.documentElement.classList.toggle('is-offline', off);
+      const bar = $('[data-offline-bar]');
+      if (bar) {
+        bar.hidden = !off;
+        const n = this.savedCount();
+        $('[data-offline-bar-text]', bar).textContent = !n
+          ? 'אין חיבור לאינטרנט, ואף ספר עוד לא נשמר במכשיר'
+          : n === 1
+            ? 'אין חיבור לאינטרנט — ספר אחד שמור במכשיר וזמין לקריאה'
+            : `אין חיבור לאינטרנט — ${n === CATALOG.length ? 'כל הספרים שמורים' : `${n} ספרים שמורים`} במכשיר וזמינים לקריאה`;
+      }
+      const vhs = $('#btn-videos');
+      if (vhs) {
+        // ⚠️ לא aria-disabled: ‏‎.btn[aria-disabled] מבטל pointer-events,
+        // והלחיצה לא הייתה מגיעה למטפל שמסביר למה אין מה לפתוח.
+        vhs.classList.toggle('is-unavailable', off);
+        vhs.title = off ? 'אוסף קלטות הוידאו זמין רק עם חיבור לאינטרנט' : '';
+      }
+    };
+    this._syncConnection = sync;
+    addEventListener('online', () => { sync(); if (this.supported) this.refresh(); });
+    addEventListener('offline', sync);
+    // ⚠️ הקישור נשאר <a> אמיתי; כשאין רשת רק עוצרים את הניווט, כדי
+    // שהמשתמש לא יגיע לדף השגיאה של הדפדפן באמצע טיסה.
+    $('#btn-videos')?.addEventListener('click', (e) => {
+      if (navigator.onLine) return;
+      e.preventDefault();
+      this.say('אוסף קלטות הוידאו זמין רק עם חיבור לאינטרנט.');
+    });
+    sync();
+  },
+
+  /**
+   * הודעה קצרה למשתמש. בתוך החלונית — בשורת המצב שלה; בכל מקום אחר —
+   * פתק צף בתחתית המסך (‏toast() הקיים חי רק בתוך הקורא).
+   */
+  say(msg) {
+    const panelOpen = !$('#offline-layer')?.hidden;
+    const out = $('[data-offline-progress]');
+    if (out) out.textContent = panelOpen ? msg : '';
+    if (panelOpen) return;
+    const note = $('[data-offline-note]');
+    if (!note) return;
+    note.textContent = msg;
+    note.hidden = false;
+    clearTimeout(this._noteTimer);
+    this._noteTimer = setTimeout(() => { note.hidden = true; }, 6000);
+  },
+
+  /* ---------- תצוגה ---------- */
+
+  async openPanel() {
+    Layers.open($('#offline-layer'));
+    this.paint();
+    if (navigator.onLine && this.supported) {
+      await Promise.all(CATALOG.map((b) => this.sizeOf(b)));
+      this.paint();
+    }
+  },
+
+  fmt(bytes) {
+    return bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1e3))}KB`;
+  },
+
+  label(book) {
+    if (this.busy.has(book.id)) return `שומר… ${this.busy.get(book.id)}%`;
+    // בלי ✓ בטקסט — לכפתור יש אייקון וי משלו
+    return this.isSaved(book) ? 'שמור במכשיר' : 'שמירה לקריאה בלי אינטרנט';
+  },
+
+  /** עדכון זול בזמן הורדה — רק הטקסטים, בלי לבנות מחדש. */
+  paintProgress(book) {
+    if (Card.book?.id === book.id) {
+      const lbl = $('[data-offline-label]');
+      if (lbl) lbl.textContent = this.label(book);
+    }
+    const row = $(`[data-offline-row="${book.id}"] [data-offline-state]`);
+    if (row) row.textContent = this.label(book);
+  },
+
+  paint() {
+    this._syncConnection?.();
+    const html = document.documentElement;
+    const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    html.classList.toggle('is-standalone', standalone);
+
+    // --- כרטיס הספר הפתוח ---
+    const slot = $('[data-offline-slot]');
+    if (slot) {
+      const book = Card.book;
+      slot.hidden = !this.supported || !book;
+      if (book) {
+        const saved = this.isSaved(book);
+        const busy = this.busy.has(book.id);
+        const btn = $('[data-offline-save]', slot);
+        btn.dataset.state = busy ? 'busy' : saved ? 'saved' : 'idle';
+        btn.setAttribute('aria-pressed', String(saved));
+        btn.disabled = busy;
+        $('[data-offline-label]', slot).textContent = this.label(book);
+        $('[data-offline-remove]', slot).hidden = !saved || busy;
+      }
+    }
+
+    // --- השדרות על המדף ---
+    for (const el of $$('.book[data-book-id]')) {
+      const book = CATALOG.find((b) => b.id === el.dataset.bookId);
+      if (!book) continue;
+      const on = this.isSaved(book);
+      let badge = $('.book__saved', el);
+      if (on && !badge) {
+        badge = document.createElement('span');
+        badge.className = 'book__saved';
+        badge.setAttribute('aria-hidden', 'true');
+        badge.innerHTML = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>';
+        el.append(badge);
+      } else if (!on && badge) badge.remove();
+      const base = el.getAttribute('aria-label').replace(/ · שמור במכשיר$/, '');
+      el.setAttribute('aria-label', on ? `${base} · שמור במכשיר` : base);
+    }
+
+    // --- כפתור הכותרת ---
+    const head = $('#btn-offline');
+    if (head) {
+      const n = this.savedCount();
+      head.dataset.saved = String(n);
+      $('[data-offline-count]', head).textContent = n ? `${n}/${CATALOG.length}` : '';
+    }
+
+    // --- חלונית "קריאה בלי אינטרנט" ---
+    const list = $('[data-offline-list]');
+    if (list) {
+      list.replaceChildren(...CATALOG.map((book) => {
+        const li = document.createElement('li');
+        li.className = 'offline-row';
+        li.dataset.offlineRow = book.id;
+        const saved = this.isSaved(book);
+        li.dataset.state = this.busy.has(book.id) ? 'busy' : saved ? 'saved' : 'idle';
+        const size = this.sizes.get(book.id);
+        li.innerHTML = `
+          <span class="offline-row__title"></span>
+          <span class="offline-row__size">${size ? this.fmt(size) : ''}</span>
+          <span class="offline-row__state" data-offline-state></span>
+          <button type="button" class="offline-row__act"></button>`;
+        $('.offline-row__title', li).textContent = book.title;
+        $('[data-offline-state]', li).textContent =
+          this.busy.has(book.id) ? this.label(book) : saved ? '✓ שמור' : 'לא שמור';
+        const act = $('.offline-row__act', li);
+        act.textContent = saved ? 'הסרה' : 'שמירה';
+        act.setAttribute('aria-label', `${saved ? 'הסרת' : 'שמירת'} "${book.title}"`);
+        act.disabled = this.busy.size > 0 || !this.supported;
+        act.addEventListener('click', () => (saved ? this.remove(book) : this.save(book)));
+        return li;
+      }));
+
+      const all = this.savedCount() === CATALOG.length;
+      const total = CATALOG.reduce((s, b) => s + (this.sizes.get(b.id) || 0), 0);
+      const allBtn = $('[data-offline-all]');
+      allBtn.disabled = !this.supported || all || this.busy.size > 0;
+      $('[data-offline-all-label]').textContent = all
+        ? 'כל הספרים שמורים במכשיר'
+        : `שמירת כל הספרים${total ? ` (${this.fmt(total)})` : ''}`;
+      $('[data-offline-clear]').hidden = !this.savedCount() || this.busy.size > 0;
+      $('[data-offline-unsupported]').hidden = this.supported;
+    }
+  },
+};
+
+/* ============================================================================
  * §12 — אתחול
  * ========================================================================== */
 
@@ -3038,6 +3457,7 @@ function init() {
   });
 
   $('#btn-about')?.addEventListener('click', () => Layers.open($('#about-layer')));
+  Offline.init();
 
   whenPdfjsReady().catch(() => {
     console.error('[library] pdf.js לא נטען — בדוק את vendor/pdfjs/');
