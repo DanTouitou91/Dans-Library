@@ -7,6 +7,9 @@
 # ‎הערה על Google Analytics:
 # ‎‏gtag.js נטען מ-googletagmanager.com ומשדר ל-google-analytics.com, ולכן
 # ‎שלושת המקורות האלה נוספו ל-script-src, ל-connect-src ול-img-src. הקוד
+# ‎⚠️ ‏www.google.com ב-connect-src: חלק מהאירועים (למשל "גלילה עד 90%")
+# ‎ש-GA4 שולח ל-www.google.com/g/collect ולא ל-google-analytics.com. הם
+# ‎נחסמו בשקט עד שבדיקת ה-CI של קריאה בלי אינטרנט גללה עד הסוף ותפסה את זה.
 # ‎המוטבע שגוגל מספקת הועבר ל-assets/analytics.js **בכוונה**: הוספת
 # ‎'unsafe-inline' ל-script-src הייתה פותחת את האתר להזרקת קוד, וזה מחיר
 # ‎גבוה בהרבה מקובץ נפרד אחד. script-src נשאר בלי unsafe-inline.
@@ -31,7 +34,7 @@
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=(), interest-cohort=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://fonts.googleapis.com https://fonts.gstatic.com; media-src 'self' https://github.com https://release-assets.githubusercontent.com https://objects.githubusercontent.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://fonts.googleapis.com https://fonts.gstatic.com; media-src 'self' https://github.com https://release-assets.githubusercontent.com https://objects.githubusercontent.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
 
 # ‎הספריות נעולות לגרסה מדויקת ולעולם לא משתנות תחת אותו נתיב.
 /vendor/*
