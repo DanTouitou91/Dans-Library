@@ -213,6 +213,9 @@ with sync_playwright() as pw:
     check("viewer notice about speech/text errors is shown under the player",
           page.locator(".notice").is_visible() and "ייתכנו שיבושים בדיבור או טעויות בטקסט" in page.locator(".notice").inner_text())
     check("tape without a book field hides the book link", not page.locator("[data-book-wrap]").is_visible())
+    check("desktop plays straight from GitHub — the relay is not used (no Netlify traffic)",
+          (vstate(page)["src"] or "").startswith("https://github.com/")
+          and page.evaluate("sessionStorage.getItem('dl:video-proxy')") is None, vstate(page)["src"])
     check("chapter list open beside the TV on desktop", page.locator("#chapters").get_attribute("data-open") == "true")
     page.screenshot(path=f"{SHOT}/player-desktop.png")
 
@@ -437,6 +440,57 @@ with sync_playwright() as pw:
     page.wait_for_timeout(2500)
     check("gives up after bounded retries (no endless loop)", gh.count("redirect") == reds and reds <= 5, str(reds))
     page.screenshot(path=f"{SHOT}/fault.png")
+    ctx.close(); browser.close()
+    gh.stop()
+
+    # =====================================================================
+    # ד2. אייפון: GitHub שולח משהו שהנגן לא יודע לנגן → מעבר אוטומטי לממסר
+    # ‏(‏/v/…, ‏netlify/edge-functions/video.js). כאן הממסר מדומה ב-page.route.
+    # =====================================================================
+    gh = FakeGitHub(FAKEGH_BREAK=1)
+    browser, ctx = launch(pw, gh)
+    page = ctx.new_page()
+    rec = instrument(page)
+    fixture = open(os.path.join(HERE, "fixtures", "test-tape.mp4"), "rb").read()
+    relay_hits = []
+
+    def relay(route, req):
+        relay_hits.append(req.url.split("/v/", 1)[1])
+        size = len(fixture)
+        m = re.match(r"bytes=(\d+)-(\d*)", req.headers.get("range") or "")
+        a = int(m.group(1)) if m else 0
+        b = min(int(m.group(2)) if m and m.group(2) else size - 1, size - 1)
+        route.fulfill(status=206, body=fixture[a:b + 1], headers={
+            "Content-Type": "video/mp4", "Accept-Ranges": "bytes",
+            "Content-Range": f"bytes {a}-{b}/{size}", "Content-Length": str(b - a + 1)})
+    page.route("**/v/*", relay)
+
+    page.goto(BASE + "/videos.html", wait_until="networkidle")
+    page.click(".tape[data-tape-id=test-tape]")
+    ok = wait_for(page, "()=>{const v=document.querySelector('.tv__video');return !v.paused && v.currentTime>0.3}", 15000)
+    st = vstate(page)
+    check("iPhone case: tape still plays (falls back to the relay)", ok and not st["fault"], str(st))
+    check("iPhone case: player switched to /v/<file>", (st["src"] or "").startswith("/v/test-tape.mp4"), st["src"])
+    check("iPhone case: the direct GitHub attempt really failed first", gh.count("broken") >= 1, str(gh.count("broken")))
+    check("iPhone case: no blue fault screen and no wasted retries",
+          not st["fault"] and page.evaluate("Player.attempts") == 0, str(page.evaluate("Player.attempts")))
+    check("iPhone case: relay choice remembered for this visit",
+          page.evaluate("sessionStorage.getItem('dl:video-proxy')") == "1")
+    page.click(".ch[data-ch='2']")
+    ok = wait_for(page, "()=>document.querySelector('.tv__video').currentTime>=8", 6000)
+    check("iPhone case: chapter jump works through the relay (Range)", ok, str(vstate(page)["t"]))
+
+    # הקלטת הבאה באותו ביקור — ישר מהממסר, בלי לנסות שוב את GitHub
+    broken_before = gh.count("broken")
+    page.evaluate("Player.pause()")
+    page.click(".room__bar [data-act='back']")
+    page.wait_for_timeout(300)
+    page.click(".tape[data-tape-id=numbered]")
+    ok = wait_for(page, "()=>{const v=document.querySelector('.tv__video');return !v.paused && v.currentTime>0.3}", 10000)
+    check("iPhone case: next tape loads straight from the relay",
+          ok and vstate(page)["src"].startswith("/v/") and gh.count("broken") == broken_before,
+          f"{vstate(page)['src']} broken {broken_before}->{gh.count('broken')}")
+    check("iPhone case: zero CSP violations (relay is same-origin)", not rec["csp"], "; ".join(rec["csp"][:2]))
     ctx.close(); browser.close()
     gh.stop()
 

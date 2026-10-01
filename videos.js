@@ -462,6 +462,24 @@ const Static = {
   },
 };
 
+/**
+ * ממסר הווידאו לאייפון (netlify/edge-functions/video.js, ‏/v/<קובץ>).
+ * ⚠️ GitHub מגיש את הקבצים כ-application/octet-stream, מכתובת בלי סיומת.
+ * כרום במחשב מתעלם; WebKit — כל דפדפן באייפון, גם כרום — מסרב לנגן.
+ * הממסר מעביר את אותו קובץ כ-video/mp4. הוא גיבוי בלבד: כל בייט דרכו נספר
+ * במכסת Netlify, ולכן עוברים אליו רק אחרי כישלון לפני שהסרטון נטען, וזוכרים
+ * את זה לשאר הביקור — בלי לנחש לפי User-Agent.
+ */
+const Relay = {
+  KEY: 'dl:video-proxy',
+  url(tape) {
+    const m = tape?.src.match(/^https:\/\/github\.com\/DanTouitou91\/Dans-Library\/releases\/download\/videos-v1\/([\w.\-]+\.mp4)$/);
+    return m ? `/v/${m[1]}` : null;
+  },
+  preferred() { try { return sessionStorage.getItem(this.KEY) === '1'; } catch { return false; } },
+  remember() { try { sessionStorage.setItem(this.KEY, '1'); } catch {} },
+};
+
 const Player = {
   tape: null,
   chapterIdx: -1,
@@ -470,6 +488,8 @@ const Player = {
   lastTime: 0,          // המיקום הטוב האחרון; ממנו ממשיכים אחרי כשל רשת
   attempts: 0,
   recoveryPoint: 0,
+  useRelay: false,      // הקלטת מתנגנת דרך ‏/v/… (אייפון) ולא ישירות מ-GitHub
+  metaLoaded: false,    // האם הסרטון נטען אי פעם — כישלון לפני כן = "לא יודע לנגן מכאן"
   dragging: false,
   cameFromStore: false,
   saveTick: 0,
@@ -589,7 +609,9 @@ const Player = {
     $('[data-clock]').textContent = fmt(this.startAt);
 
     const v = this.video;
-    v.src = tape.src;
+    this.metaLoaded = false;
+    this.useRelay = Relay.preferred() && !!Relay.url(tape);
+    v.src = this.source();
     v.load();
     Static.start();
 
@@ -692,7 +714,13 @@ const Player = {
     return Number.isFinite(d) && d > 0 ? d : (this.tape?.duration || 0);
   },
 
+  /** מאיפה לטעון: ישירות מ-GitHub, או דרך הממסר כשהמכשיר צריך אותו. */
+  source() {
+    return (this.useRelay && Relay.url(this.tape)) || this.tape.src;
+  },
+
   onMeta() {
+    this.metaLoaded = true;
     this.setDuration(this.duration());
     if (this.startAt > 0) {
       const d = this.duration();
@@ -757,6 +785,19 @@ const Player = {
     if (!this.tape || !err || !v.getAttribute('src')) return;
     if (err.code === 1) return;                                   // MEDIA_ERR_ABORTED — אנחנו ביטלנו
 
+    // ⚠️ נכשל עוד לפני שנטען משהו — זה לא רשת איטית, זה "לא יודע לנגן את
+    // מה ש-GitHub שולח" (אייפון). עוברים מיד לממסר, בלי לבזבז את 3 הניסיונות.
+    if (!this.metaLoaded && !this.useRelay && Relay.url(this.tape)) {
+      this.useRelay = true;
+      Relay.remember();
+      console.info('הנגן: עובר לממסר הווידאו', err.code);
+      this.startAt = this.lastTime;
+      v.src = this.source();
+      v.load();
+      this.modeOsd('TRACKING…', 0);
+      return;
+    }
+
     if (this.attempts >= 3) {
       Static.start();
       this.setLed('err');
@@ -775,7 +816,7 @@ const Player = {
     this.startAt = this.lastTime;
     this.recovering = true;
     Static.start();                     // "שלג" עד שהתמונה חוזרת, במקום מסך שחור
-    const src = this.tape.src;
+    const src = this.source();
     v.src = /^https?:/.test(src) ? `${src}${src.includes('?') ? '&' : '?'}r=${Date.now().toString(36)}` : src;
     v.load();
     this.modeOsd('TRACKING…', 0);
@@ -789,7 +830,7 @@ const Player = {
     this.setLed('on');
     const v = this.video;
     this.startAt = this.lastTime;
-    v.src = this.tape.src;
+    v.src = this.source();
     v.load();
     this.play();
   },

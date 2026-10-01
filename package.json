@@ -1,6 +1,7 @@
 {
   "name": "dans-library",
   "private": true,
+  "type": "module",
   "description": "אוסף ספרי הלמידה של דן — אתר סטטי. התלות היחידה משמשת את פונקציית מונה המבקרים (netlify/functions/visits).",
   "dependencies": {
     "@netlify/blobs": "^11.1.3"

@@ -46,6 +46,10 @@ ISSUED = [0]
 # ‏מותר לו להחזיר פחות ממה שהתבקש (Content-Range מדויק), והדפדפן פשוט
 # ‏מבקש את ההמשך — כך נוצרות בקשות רבות לאורך זמן, כמו בסרטון של 250MB.
 CHUNK = int(os.environ.get("FAKEGH_CHUNK", "0"))
+# ‏מצב "אייפון": מחזיר בייטים שאינם וידאו. כרומיום נכשל עליהם בדיוק כמו WebKit
+# ‏נכשל על application/octet-stream — לפני שנטען משהו — וכך אפשר לבדוק כאן את
+# ‏המעבר האוטומטי לממסר (‏/v/…) בלי מכשיר אפל.
+BREAK = os.environ.get("FAKEGH_BREAK") == "1"
 DELAY = float(os.environ.get("FAKEGH_DELAY", "0"))
 ASSET_HOST = "release-assets.githubusercontent.com"
 
@@ -93,6 +97,10 @@ class H(http.server.BaseHTTPRequestHandler):
                 # ‏כך GitHub עונה על כתובת חתומה שפגה (נמדד: 618, לא 403)
                 note(kind="expired", range=rng)
                 return self.reply(618, b"jwt:expired")
+            if BREAK:
+                note(kind="broken", range=rng)
+                return self.reply(200, b"<html>not a video</html>" * 64,
+                                  {"Content-Type": "application/octet-stream"})
             path = os.path.join(FIXTURES, os.path.basename(name))
             if not os.path.isfile(path):
                 note(kind="asset-404", name=name)

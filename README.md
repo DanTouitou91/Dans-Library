@@ -131,6 +131,21 @@ Netlify מזהה את השינוי ומפרסם אותו אוטומטית תוך
   נקודה ולאותו מצב ניגון — וזה נבדק מול GitHub מדומה שמדמה את התפוגה
   (`tests/fakegithub.py`).
 
+### ⚠️ אייפון: ממסר הווידאו (‏`/v/<קובץ>`)
+
+GitHub מגיש את קובצי ה-Release כ-`application/octet-stream` עם
+`Content-Disposition: attachment`, ומפנה לכתובת חתומה **בלי סיומת .mp4**
+(והסוג חתום בתוך הכתובת — אי אפשר לבקש אחר). כרום במחשב מזהה MP4 לפי
+התוכן ומתעלם; **באייפון כל הדפדפנים — גם כרום — הם WebKit**, שמסתמך על
+הסוג המוצהר או על הסיומת, ולכן מסרב לנגן ("הקלטת נתקעה" כבר ב-0:00).
+
+`netlify/edge-functions/video.js` מבקש את אותו קובץ מ-GitHub (כולל Range)
+ומעביר אותו כ-`video/mp4`. **הוא גיבוי בלבד:** הנגן מנסה קודם ישירות
+מ-GitHub, ועובר לממסר רק כשנכשל לפני שהסרטון נטען — וזוכר את זה לשאר הביקור
+(`sessionStorage`, ‏`dl:video-proxy`). כל בייט שעובר דרך הממסר נספר במכסת
+התעבורה של Netlify, ולכן מחשבים ואנדרואיד לא משתמשים בו. רק קבצים מה-Release
+‏`videos-v1` של המאגר הזה — הוא לא ממסר כללי.
+
 ### מה נשמר בדפדפן
 
 | מפתח | תוכן |
@@ -195,7 +210,7 @@ python3 tests/verify.py
 python3 tests/csp_check.py
 python3 tests/videos_check.py
 python3 tests/visits_check.py        # מונה המבקרים בדפדפן
-node --test tests/visits_test.mjs    # פונקציית המונה, בלי Netlify
+node --test tests/visits_test.mjs tests/video_edge_test.mjs   # המונה וממסר הווידאו, בלי Netlify
 ```
 
 260+ בדיקות שמריצות את האתר האמיתי בכרומיום, ורצות אוטומטית בכל דחיפה
@@ -231,6 +246,7 @@ tapes.json          קטלוג הקלטות ← כאן מוסיפים סרטון
 tools/chapters.py   שליפת הפרקים המוטמעים מקובץ MP4
 assets/visits.js    מונה המבקרים — צד הדפדפן, משותף לשני העמודים
 netlify/functions/visits/   מונה המבקרים — צד השרת (Netlify Blobs)
+netlify/edge-functions/video.js   ממסר וידאו לאייפון (‏/v/…) — ראו "אייפון" בסעיף הסרטונים
 package.json        התלות היחידה: @netlify/blobs, בשביל המונה
 netlify.toml        תצורת פרסום
 _headers            כותרות אבטחה ומטמון
