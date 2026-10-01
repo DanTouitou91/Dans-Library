@@ -329,7 +329,9 @@ with sync_playwright() as pw:
 
     # ---------- fallback to scroll view ----------
     # Simulate the real failure: the page-flip script never loads.
-    fb = browser.new_page(viewport={"width": 1280, "height": 900})
+    # ⚠️ service_workers="block": ‏page.route לא רואה בקשות שה-Service Worker
+    # (sw.js) עונה עליהן — בלי זה היירוט לא קורה והבדיקה בודקת משהו אחר.
+    fb = browser.new_page(viewport={"width": 1280, "height": 900}, service_workers="block")
     fb.route("**/vendor/page-flip/**", lambda route: route.abort())
     fb.goto(BASE + "/#/book/yahasim-beinleumiyim/read/2", wait_until="networkidle")
     fb.wait_for_timeout(7000)
@@ -572,7 +574,9 @@ with sync_playwright() as pw:
     dp.close()
 
     # ---------- כשהפתיחה נכשלת: אבחון אמיתי, והתאוששות ----------
-    fx = browser.new_page(viewport={"width": 1280, "height": 900})
+    # ⚠️ service_workers="block": ‏page.route לא רואה בקשות שה-Service Worker
+    # (sw.js) עונה עליהן — בלי זה היירוט לא קורה והבדיקה בודקת משהו אחר.
+    fx = browser.new_page(viewport={"width": 1280, "height": 900}, service_workers="block")
     fx.route("**/books/lashon-hevra-tarbut.pdf",
              lambda r: r.fulfill(status=200, content_type="text/html", body="<html>nope</html>"))
     fx.goto(BASE + "/#/book/lashon-hevra-tarbut/read/1", wait_until="networkidle")
@@ -582,7 +586,9 @@ with sync_playwright() as pw:
     fx.close()
 
     # נפילה חולפת של הרשת — כמו חיבור סלולרי שנקטע — חייבת להתאושש
-    rt = browser.new_page(viewport={"width": 1280, "height": 900})
+    # ⚠️ service_workers="block": ‏page.route לא רואה בקשות שה-Service Worker
+    # (sw.js) עונה עליהן — בלי זה היירוט לא קורה והבדיקה בודקת משהו אחר.
+    rt = browser.new_page(viewport={"width": 1280, "height": 900}, service_workers="block")
     _n = {"c": 0}
     def _flaky(route):
         _n["c"] += 1
@@ -590,7 +596,7 @@ with sync_playwright() as pw:
     rt.route("**/books/yahasim-beinleumiyim.pdf", _flaky)
     rt.goto(BASE + "/#/book/yahasim-beinleumiyim/read/1", wait_until="networkidle")
     rt.wait_for_timeout(12000)
-    check("נפילת רשת חולפת מתאוששת", rt.locator("#fault").is_hidden(),
+    check("נפילת רשת חולפת מתאוששת", rt.locator("#fault").is_hidden() and _n["c"] >= 2,
           f"requests={_n['c']}")
     check("והספר נטען אחרי ההתאוששות",
           rt.locator("[data-page-total]").inner_text() == "40",
