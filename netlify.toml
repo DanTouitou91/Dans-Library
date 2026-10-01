@@ -1,9 +1,15 @@
-# ‎תצורת Netlify — אתר סטטי לחלוטין, ללא שלב בנייה.
+# ‎תצורת Netlify — אתר סטטי, ללא שלב בנייה.
 # ‎הכותרות (headers) מוגדרות בקובץ _headers כדי שיהיה מקור אמת אחד.
 
 [build]
   publish = "."
 
 [build.environment]
-  # ‎אין תלויות npm להתקנה — האתר מגיש קבצים סטטיים בלבד.
   NETLIFY_USE_YARN = "false"
+
+# ‎היוצא מן הכלל היחיד לאתר הסטטי: מונה המבקרים (‏/api/visits).
+# ‎הוא צריך מקום לשמור בו מספר שכל המבקרים רואים, ולכן הוא פונקציה עם
+# ‎Netlify Blobs. זו גם הסיבה ל-package.json — תלות אחת (@netlify/blobs),
+# ‎ש-Netlify מתקינה לבד בזמן הפריסה. node_modules לא עולה לאתר המפורסם.
+[functions]
+  directory = "netlify/functions"

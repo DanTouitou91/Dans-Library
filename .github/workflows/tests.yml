@@ -37,6 +37,13 @@ jobs:
       - name: בדיקות זרימה
         run: python3 tests/verify.py http://127.0.0.1:8788
 
+      # ‏הלוגיקה של פונקציית מונה המבקרים — בלי Netlify, עם store בזיכרון
+      - name: בדיקות פונקציית מונה המבקרים
+        run: node --test tests/visits_test.mjs
+
+      - name: בדיקות מונה המבקרים בדפדפן
+        run: python3 tests/visits_check.py http://127.0.0.1:8788
+
       - name: בדיקות CSP ורינדור
         run: python3 tests/csp_check.py http://127.0.0.1:8788
 

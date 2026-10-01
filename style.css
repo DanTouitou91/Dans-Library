@@ -1410,6 +1410,65 @@ html::-webkit-scrollbar-corner,
   box-shadow: inset 0 12px 22px rgba(0,0,0,.5);
 }
 .site-footer p { margin: 0; }
+
+/* --- מונה המבקרים: לוחית פליז ותופי ספרות, כמו מונה כרטיסים ישן ---
+   מוסתר ב-[hidden] עד שהמספר מגיע (הכלל הגלובלי עם !important גובר על
+   ה-inline-flex כאן). */
+.site-footer .visits {
+  display: inline-flex; flex-direction: column; align-items: center; gap: .45rem;
+  margin: 0 auto 1.3rem;
+  padding: .55rem .9rem .7rem;
+  border-radius: 5px;
+  background: linear-gradient(180deg, var(--brass-lt), var(--brass) 45%, var(--brass-dk));
+  box-shadow: inset 0 1px 0 rgba(255,240,200,.55), inset 0 -2px 3px rgba(0,0,0,.35), 0 6px 14px rgba(0,0,0,.5);
+  position: relative;
+}
+/* שני ברגים בפינות הלוחית */
+.site-footer .visits::before, .site-footer .visits::after {
+  content: ""; position: absolute; top: 50%; translate: 0 -50%;
+  inline-size: 7px; block-size: 7px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #F4E2B4, #6B5128 70%);
+  box-shadow: 0 1px 1px rgba(0,0,0,.5);
+}
+.site-footer .visits::before { inset-inline-start: 6px; }
+.site-footer .visits::after  { inset-inline-end: 6px; }
+.visits__label {
+  font-family: var(--font-ui);
+  font-size: .72rem; font-weight: 700; letter-spacing: .14em;
+  color: #3A2A12;
+  text-shadow: 0 1px 0 rgba(255,240,200,.55);   /* חריטה */
+}
+.visits__digits {
+  display: inline-flex; gap: 3px;
+  direction: ltr;                    /* מספר נקרא משמאל לימין גם בעמוד עברי */
+  padding: 3px;
+  border-radius: 3px;
+  background: #1A110A;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.8);
+}
+.visits__drum {
+  --h: 1.35em;
+  position: relative;
+  inline-size: .82em; block-size: var(--h);
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 1.25rem; font-weight: 700;
+  color: #F4E8D0;
+  background: linear-gradient(180deg, #0D0805, #3A2A1E 50%, #0D0805);
+  border-radius: 2px;
+}
+/* ברק של גליל: כהה בקצוות, בהיר באמצע */
+.visits__drum::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,.65), transparent 32%, transparent 68%, rgba(0,0,0,.65));
+}
+.visits__strip {
+  display: flex; flex-direction: column;
+  transform: translateY(calc(var(--d, 0) * var(--h) * -1));
+  transition: transform 1.3s cubic-bezier(.2,.75,.25,1) calc(var(--i, 0) * 90ms);
+}
+.visits__strip > span { block-size: var(--h); line-height: var(--h); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .visits__strip { transition: none; } }
 .site-footer__rule {
   display: block;
   inline-size: min(220px, 60%);

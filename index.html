@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=David+Libre:wght@400;500;700&family=Miriam+Libre:wght@400;700&family=Rubik:wght@700&display=swap">
 
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -165,6 +165,13 @@
 
   <footer class="site-footer">
     <span class="site-footer__rule" aria-hidden="true"></span>
+    <!-- מונה המבקרים: לוחית פליז עם תופי ספרות, כמו מונה כרטיסים ישן.
+         מוסתר עד שהמספר מגיע מהשרת — ראו assets/visits.js. -->
+    <p class="visits" data-visits="library" data-visits-noun="ביקורים בספרייה" hidden>
+      <span class="visits__label" aria-hidden="true">קוראים שביקרו בספרייה</span>
+      <span class="visits__digits" data-visits-digits aria-hidden="true"></span>
+      <span class="sr-only" data-visits-text></span>
+    </p>
     <p>האתר נוצר על ידי דן טואיטו, למידה מהנה!</p>
   </footer>
 </div>
@@ -411,5 +418,7 @@
      ולא כאן: ל-script-src אין 'unsafe-inline', ובלוק מוטבע היה נחסם בשקט. -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-PNNQZ1Y4MP"></script>
 <script src="assets/analytics.js?v=1" defer></script>
+<!-- מונה המבקרים (‏/api/visits — פונקציית Netlify, אותו origin) -->
+<script src="assets/visits.js?v=1" defer></script>
 </body>
 </html>

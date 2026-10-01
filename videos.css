@@ -397,6 +397,65 @@ body {
 }
 .store__foot p { margin: 0; }
 
+/* מונה המבקרים: תצוגת LED אדומה של דלפק השכרה, עם שלט צהוב.
+   אותו מבנה כמו בספרייה (תוף + רצועת 0–9 ב-assets/visits.js), אבל בלי
+   גלגול — ספרות LED קופצות, ומאחוריהן "8" כבויה כמו מקטעים שלא נדלקו. */
+.store__foot .visits {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 8px;
+  margin: 0 auto 16px;
+}
+.store__foot .visits__label {
+  font: 900 .8rem/1 var(--font);
+  letter-spacing: .06em;
+  color: var(--ink);
+  background: var(--yellow);
+  padding: .4em .9em;
+  border-radius: 3px;
+  box-shadow: 0 2px 0 var(--yellow-dk);
+  transform: rotate(-1.5deg);
+}
+.store__foot .visits__digits {
+  display: inline-flex; gap: 3px;
+  direction: ltr;
+  padding: 6px 12px;
+  background: #0A0A0A;
+  border: 2px solid #2A2A2A;
+  border-radius: 6px;
+  box-shadow: inset 0 0 12px #000, 0 6px 14px rgba(0,0,0,.5);
+}
+.store__foot .visits:not([hidden]) .visits__digits { animation: led-on .6s steps(1) both; }
+@keyframes led-on {
+  0% { opacity: 0; } 20% { opacity: 1; } 35% { opacity: .2; } 50%, 100% { opacity: 1; }
+}
+.store__foot .visits__drum {
+  --h: 1.1em;
+  position: relative;
+  inline-size: .58em; block-size: var(--h);
+  overflow: hidden;
+  font: 400 2.2rem/1 var(--font-osd);
+  color: #FF3B30;
+  text-shadow: 0 0 6px rgba(255,59,48,.8);
+}
+.store__foot .visits__drum::before {
+  content: "8";
+  position: absolute; inset: 0;
+  text-align: center; line-height: var(--h);
+  color: rgba(255,59,48,.13);
+  text-shadow: none;
+}
+.store__foot .visits__strip {
+  position: relative;
+  display: flex; flex-direction: column;
+  transform: translateY(calc(var(--d, 0) * var(--h) * -1));
+}
+.store__foot .visits__strip > span { block-size: var(--h); line-height: var(--h); text-align: center; }
+/* בחושך הספרות בהירות יותר — ולא הילה רחבה יותר: כל תוף הוא overflow:
+   hidden, והילה רחבה נחתכה בשולי התוף לריבועים כהים סביב כל ספרה. */
+:root[data-theme="dark"] .store__foot .visits__drum {
+  color: #FF5A4E;
+  text-shadow: 0 0 5px rgba(255,90,78,.95);
+}
+
 /* ---------- 4. קופסאות הקלטות ---------- */
 
 .tape {
