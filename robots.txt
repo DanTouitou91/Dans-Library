@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dans-library.netlify.app/sitemap.xml
