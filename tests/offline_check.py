@@ -93,7 +93,7 @@ try:
         check("service worker registers and controls the page (no reload needed)", True)
         page.wait_for_timeout(1500)       # ההתקנה + הודעת warm
         shell = cache_keys(page, "dl-shell-v1")
-        need = ["/", "/script.js?v=10", "/style.css?v=12", "/vendor/pdfjs/pdf.min.mjs",
+        need = ["/", "/script.js?v=11", "/style.css?v=12", "/vendor/pdfjs/pdf.min.mjs",
                 "/vendor/pdfjs/pdf.worker.min.mjs", "/vendor/pdfjs/pdfjs-init.mjs",
                 "/vendor/page-flip/page-flip.browser.js", "/vendor/pdfjs/standard_fonts/FoxitSerif.pfb",
                 "/manifest.webmanifest", "/assets/icons/icon-180.png"]
@@ -205,7 +205,7 @@ try:
         page.goto(BASE + "/#/")
         page.reload(wait_until="networkidle")
         page.wait_for_function(f"""async () => {{ const k = (await (await caches.open('dl-books')).keys()).map(r => r.url);
-            return k.length === 1 && k[0].endsWith('/books/{REVVED}.pdf'); }}""", timeout=15000)
+            return k.length === 1 && k[0] === Offline.key(CATALOG.find(b => b.id === '{REVVED}')); }}""", timeout=15000)
         check("an older edition (other ?v=) is replaced by the current one when online", True)
 
         # ---------- 10. שמירת כל הספרייה ----------
