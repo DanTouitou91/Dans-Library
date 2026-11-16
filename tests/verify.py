@@ -75,7 +75,7 @@ with sync_playwright() as pw:
     page.goto(BASE + "/", wait_until="networkidle")
     page.wait_for_timeout(600)
 
-    check("shelf renders spines", page.locator(".book").count() == 4,
+    check("shelf renders spines", page.locator(".book").count() == 5,
           f"found {page.locator('.book').count()}")
     check("masthead title", "אוסף ספרי הלמידה של דן" in page.locator(".masthead__title").inner_text())
     check("footer text", "למידה מהנה" in page.locator(".site-footer").inner_text())

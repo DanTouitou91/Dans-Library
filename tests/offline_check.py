@@ -135,8 +135,8 @@ try:
         book_responses.clear()
         page.reload(wait_until="load")
         page.wait_for_timeout(1200)
-        check("offline reload: the shelf renders all 4 books",
-              page.evaluate("document.querySelectorAll('#library .book').length") == 4)
+        check("offline reload: the shelf renders all 5 books",
+              page.evaluate("document.querySelectorAll('#library .book').length") == 5)
         check("offline reload: styles applied (stylesheet from cache)",
               page.evaluate("getComputedStyle(document.querySelector('.book')).position") == "relative")
         bar = page.inner_text("[data-offline-bar]")
@@ -214,15 +214,15 @@ try:
         page.wait_for_timeout(600)
         all_label = page.inner_text("[data-offline-all-label]")
         check("panel lists every book and the total size",
-              page.locator(".offline-row").count() == 4 and "MB" in all_label, all_label)
+              page.locator(".offline-row").count() == 5 and "MB" in all_label, all_label)
         page.screenshot(path=f"{SHOT}/panel_before.png")
         page.click("[data-offline-all]")
-        page.wait_for_function("() => Offline.savedCount() === 4 && Offline.busy.size === 0", timeout=30000)
+        page.wait_for_function("() => Offline.savedCount() === 5 && Offline.busy.size === 0", timeout=30000)
         page.wait_for_timeout(300)
-        check("save-all stores all four books", len(cache_keys(page, "dl-books")) == 4)
-        check("panel confirms", "כל 4 הספרים שמורים" in page.inner_text("[data-offline-progress]"),
+        check("save-all stores all five books", len(cache_keys(page, "dl-books")) == 5)
+        check("panel confirms", "כל 5 הספרים שמורים" in page.inner_text("[data-offline-progress]"),
               page.inner_text("[data-offline-progress]"))
-        check("header button counts saved books", page.inner_text("[data-offline-count]") == "4/4")
+        check("header button counts saved books", page.inner_text("[data-offline-count]") == "5/5")
         page.screenshot(path=f"{SHOT}/panel_after.png")
 
         check("/api/visits never passes through the service worker",
